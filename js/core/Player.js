@@ -146,7 +146,8 @@ export class Player extends Entity {
     }
   }
 
-  draw(ctx, camera) {
+  // Sword hitbox for collision with enemies
+  getSwordHitbox() {
     if (this.state !== 'attack' && this.state !== 'spin') return null;
     const range = 18;
     const w = 16, h = 16;
