@@ -33,7 +33,12 @@ export class Entity {
       this.stateTime = 0;
       this.animFrame = 0;
       this.animTimer = 0;
+      this.updateAnim();
     }
+  }
+
+  updateAnim() {
+    // Override in subclasses to set this.anim based on state and facing
   }
 
   update(dt, tilemap, solidTiles) {

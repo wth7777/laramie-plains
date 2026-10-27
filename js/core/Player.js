@@ -125,8 +125,28 @@ export class Player extends Entity {
     // Bow, bombs, etc.
   }
 
-  // Sword hitbox for collision with enemies
-  getSwordHitbox() {
+  updateAnim() {
+    const stateAnimMap = {
+      idle: 'idle',
+      walk: 'walk',
+      attack: 'attack',
+      spin: 'attack_spin',
+      dash: 'dash',
+      hurt: 'hurt',
+    };
+    const baseAnim = stateAnimMap[this.state] || 'idle';
+    this.anim = { name: baseAnim, frames: 4, speed: 0.15, loop: true };
+    if (this.state === 'attack' || this.state === 'spin') {
+      this.anim.frames = 3;
+      this.anim.loop = false;
+    }
+    if (this.state === 'dash') {
+      this.anim.frames = 1;
+      this.anim.loop = false;
+    }
+  }
+
+  draw(ctx, camera) {
     if (this.state !== 'attack' && this.state !== 'spin') return null;
     const range = 18;
     const w = 16, h = 16;

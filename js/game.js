@@ -344,8 +344,8 @@ function updateGameover(dt) {
 function render() {
   ctx.clearRect(0, 0, PF_W, PF_H);
 
-  // Render map
-  currentMap.render(ctx, camera, ['base', 'fg']);
+  // Render map - base (floor) + obj (walls)
+  currentMap.render(ctx, camera, ['base', 'obj']);
 
   // Render player
   player.draw(ctx, camera);
