@@ -196,11 +196,16 @@ export const Input = {
     // Action buttons - Pointer Events with touch fallback
     const bindBtn = (id, key, actionName) => {
       const el = document.getElementById(id);
-      if (!el) return;
+      if (!el) {
+        console.warn('[Input] Button not found:', id);
+        return;
+      }
+      console.log('[Input] Bound button:', id, '->', actionName);
 
       const press = (e) => {
         if (e.type.startsWith('pointer') && e.pointerType === 'mouse' && e.button !== 0) return;
         e.preventDefault();
+        console.log('[Input] Press:', actionName, 'type:', e.type, 'pointerType:', e.pointerType);
         // Keyboard mirror
         this.pressed[key] = true;
         this.keys[key] = true;
@@ -212,6 +217,9 @@ export const Input = {
 
       const release = (e) => {
         if (e.type.startsWith('pointer') && e.pointerType === 'mouse' && e.button !== 0) return;
+        // Only release on pointerleave for mouse, not for touch/pen
+        if (e.type === 'pointerleave' && e.pointerType !== 'mouse') return;
+        console.log('[Input] Release:', actionName, 'type:', e.type, 'pointerType:', e.pointerType);
         // Keyboard mirror
         this.keys[key] = false;
         // Touch/pointer action state
@@ -223,7 +231,10 @@ export const Input = {
       el.addEventListener('pointerdown', press, { passive: false });
       el.addEventListener('pointerup', release, { passive: false });
       el.addEventListener('pointercancel', release, { passive: false });
-      el.addEventListener('pointerleave', release, { passive: false });
+      // pointerleave only for mouse (touch/pen use pointerup/cancel)
+      el.addEventListener('pointerleave', (e) => {
+        if (e.pointerType === 'mouse') release(e);
+      }, { passive: false });
 
       // Touch fallback ONLY if no PointerEvent support
       if (!window.PointerEvent) {
@@ -231,10 +242,6 @@ export const Input = {
         el.addEventListener('touchend', release, { passive: false });
         el.addEventListener('touchcancel', release, { passive: false });
       }
-
-      // Mouse fallback (for desktop testing when PointerEvent exists)
-      // Only register if not using pointer events for mouse
-      // Actually, PointerEvent covers mouse, so we don't need separate mouse listeners
     };
 
     bindBtn('btn-b', 'KeyZ', 'attack');
