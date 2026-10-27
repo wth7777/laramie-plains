@@ -149,8 +149,6 @@ function gameLoop(time) {
 
 // ---- Update ----
 function update(dt) {
-  Input.flush();
-
   switch (state) {
     case GameState.TITLE:
       updateTitle(dt);
@@ -176,6 +174,9 @@ function update(dt) {
   }
 
   if (toastTimer > 0) toastTimer -= dt;
+
+  // Clear per-frame input state AFTER game logic has consumed it
+  Input.flush();
 }
 
 function updateTitle(dt) {
