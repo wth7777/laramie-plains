@@ -133,34 +133,35 @@ export function worldToTileMap(worldMap, charToTile, tileset) {
   };
 }
 
-// Screen-sized map (16x11) for individual rooms
+// Screen-sized map (dynamic size) for individual rooms
 export class ScreenMap {
   constructor(tiles, charToTile, tileset) {
-    this.w = 16; this.h = 11;
-    this.baseData = new Array(176).fill(0);
-    this.objData = new Array(176).fill(0);
+    this.h = tiles.length;
+    this.w = tiles[0].length;
+    this.baseData = new Array(this.w * this.h).fill(0);
+    this.objData = new Array(this.w * this.h).fill(0);
     this.tileset = tileset;
 
-    for (let ty = 0; ty < 11; ty++) {
-      for (let tx = 0; tx < 16; tx++) {
+    for (let ty = 0; ty < this.h; ty++) {
+      for (let tx = 0; tx < this.w; tx++) {
         const ch = tiles[ty][tx];
         const tid = charToTile[ch] || 0;
         const walkable = ['.', ',', 'S', 'C', '~', 's', 'P', '=', '>', 'w', 'r', 'n', 'h', 'p', 'G', 't', 'A', 'o', '*', 'M', 'T', '_', 'D', 'L', 'K', 'Z', 'c', 'f', 'f'];
-        if (walkable.includes(ch)) this.baseData[ty * 16 + tx] = tid;
-        else this.objData[ty * 16 + tx] = tid;
+        if (walkable.includes(ch)) this.baseData[ty * this.w + tx] = tid;
+        else this.objData[ty * this.w + tx] = tid;
       }
     }
   }
 
   getTile(tx, ty, layer = 'base') {
-    if (tx < 0 || ty < 0 || tx >= 16 || ty >= 11) return 0;
-    return (layer === 'obj' ? this.objData : this.baseData)[ty * 16 + tx];
+    if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return 0;
+    return (layer === 'obj' ? this.objData : this.baseData)[ty * this.w + tx];
   }
 
   setTile(tx, ty, id, layer = 'base') {
-    if (tx < 0 || ty < 0 || tx >= 16 || ty >= 11) return;
-    if (layer === 'obj') this.objData[ty * 16 + tx] = id;
-    else this.baseData[ty * 16 + tx] = id;
+    if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return;
+    if (layer === 'obj') this.objData[ty * this.w + tx] = id;
+    else this.baseData[ty * this.w + tx] = id;
   }
 
   isSolid(tx, ty, solidTiles) {
@@ -180,16 +181,16 @@ export class ScreenMap {
   render(ctx, camera, layers = ['base']) {
     const { x: camX, y: camY } = camera.getRenderOffset();
     const startTx = Math.max(0, Math.floor(camX / TILE) - 1);
-    const endTx = Math.min(16, Math.ceil((camX + PF_W) / TILE) + 1);
+    const endTx = Math.min(this.w, Math.ceil((camX + PF_W) / TILE) + 1);
     const startTy = Math.max(0, Math.floor(camY / TILE) - 1);
-    const endTy = Math.min(11, Math.ceil((camY + PF_H) / TILE) + 1);
+    const endTy = Math.min(this.h, Math.ceil((camY + PF_H) / TILE) + 1);
 
     for (const layer of layers) {
       const d = layer === 'obj' ? this.objData : this.baseData;
       if (!d.length) continue;
       for (let ty = startTy; ty < endTy; ty++) {
         for (let tx = startTx; tx < endTx; tx++) {
-          const tid = d[ty * 16 + tx];
+          const tid = d[ty * this.w + tx];
           if (tid === 0) continue;
           const spriteName = TileMap._tileIdToName[tid];
           const sprite = TileMap._sprites?.[spriteName];

@@ -4,7 +4,7 @@
 // ============================================================
 import { Input } from './core/Input.js';
 import { Camera } from './core/Camera.js';
-import { TileMap, ScreenMap, PF_W, PF_H } from './core/TileMap.js';
+import { TileMap, ScreenMap, PF_W, PF_H, TILE } from './core/TileMap.js';
 import { Player } from './core/Player.js';
 import { RectHitbox } from './core/Hitbox.js';
 import { SPR } from './core/Sprites.js';
@@ -195,10 +195,12 @@ async function init() {
   await currentMap.loadTileset('data:image/png;base64,' + generateTilesetPNG());
 
   // Camera
-  camera = new Camera(512, 448); // single screen for now
+  const mapW = currentMap.w * TILE;
+  const mapH = currentMap.h * TILE;
+  camera = new Camera(mapW, mapH);
 
   // Player spawn at path center
-  player = new Player(256, 224);
+  player = new Player(mapW / 2, mapH / 2);
   player.sprites = SPR.fox;
   camera.snap(player.x, player.y);
 
