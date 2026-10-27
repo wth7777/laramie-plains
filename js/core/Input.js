@@ -58,14 +58,20 @@ export const Input = {
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
 
+    // Always show touch controls on mobile-sized screens
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const isMobile = window.innerWidth <= 768 || window.innerHeight <= 768;
     const tc = document.getElementById('touch-controls');
-    if ((isTouch || isMobile) && tc) tc.classList.add('visible');
+    if (tc && (isTouch || isMobile)) {
+      tc.classList.add('visible');
+      console.log('[Input] Touch controls visible:', isTouch, isMobile);
+    } else if (tc) {
+      console.log('[Input] Touch controls hidden (desktop):', window.innerWidth, window.innerHeight);
+    }
 
     const joyBase = document.getElementById('joy-base');
     const joyStick = document.getElementById('joy-stick');
-    const joyRadius = 48; // larger for 2x screen
+    const joyRadius = 48;
     const maxDist = joyRadius * 0.7;
 
     if (joyBase && joyStick) {
