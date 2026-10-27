@@ -209,9 +209,8 @@ async function init() {
 
 // Generate a simple tileset PNG programmatically
 function generateTilesetPNG() {
-  // For now, return empty - sprites are procedural
-  // In production, this would be a real tilesheet
-  return '';
+  // 1x1 transparent PNG base64
+  return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 }
 
 // ---- Game Loop ----
