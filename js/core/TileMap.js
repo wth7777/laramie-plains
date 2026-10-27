@@ -103,6 +103,9 @@ TileMap._tileIdToName = {
   37: 'pond', 38: 'roof', 39: 'sign', 40: 'waterfall',
   41: 'rail', 42: 'telegraph', 43: 'campfire', 44: 'claim_marker',
 };
+
+// Convert world.js CHAR_TILE map to TileMap format
+export function worldToTileMap(worldMap, charToTile, tileset) {
   const h = worldMap.length;
   const w = worldMap[0].length;
   const baseData = new Array(w * h).fill(0);
