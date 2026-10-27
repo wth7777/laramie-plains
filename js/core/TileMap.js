@@ -58,8 +58,10 @@ export class TileMap {
   }
 
   // Render visible portion
+  // Use procedural sprites from SPR.tiles
+  static setSpriteSource(sprites) { TileMap._sprites = sprites; }
+
   render(ctx, camera, layers = ['base', 'fg']) {
-    if (!this.tileImage) return;
     const { x: camX, y: camY } = camera.getRenderOffset();
     const startTx = Math.max(0, Math.floor(camX / TILE) - 1);
     const endTx = Math.min(this.w, Math.ceil((camX + PF_W) / TILE) + 1);
@@ -73,13 +75,11 @@ export class TileMap {
         for (let tx = startTx; tx < endTx; tx++) {
           const tid = d[ty * this.w + tx];
           if (tid === 0) continue;
-          const rect = this.getTileRect(tid);
-          if (!rect) continue;
-          ctx.drawImage(
-            this.tileImage,
-            rect.sx, rect.sy, rect.w, rect.h,
-            tx * TILE - camX, ty * TILE - camY, TILE, TILE
-          );
+          // Map tile ID to sprite name
+          const spriteName = TileMap._tileIdToName[tid];
+          const sprite = TileMap._sprites?.[spriteName];
+          if (!sprite) continue;
+          ctx.drawImage(sprite, tx * TILE - camX, ty * TILE - camY, TILE, TILE);
         }
       }
     }
@@ -91,8 +91,18 @@ export class TileMap {
   }
 }
 
-// Convert world.js CHAR_TILE map to TileMap format
-export function worldToTileMap(worldMap, charToTile, tileset) {
+// Tile ID to sprite name mapping (CHAR_TILE values -> SPR.tiles keys)
+TileMap._tileIdToName = {
+  1: 'grass', 2: 'flowers', 3: 'sagebrush', 4: 'cottonwood', 5: 'river',
+  6: 'sand', 7: 'rock', 8: 'bush', 9: 'path', 10: 'crack', 11: 'bridge',
+  12: 'fence', 13: 'hwall', 14: 'hdoor', 15: 'cave', 16: 'stump',
+  17: 'roof', 18: 'sign', 19: 'waterfall', 20: 'pond', 21: 'grave',
+  22: 'dwall', 23: 'dfloor', 24: 'door_lock', 25: 'door_boss', 26: 'door_shut',
+  27: 'stairs', 28: 'dcrack', 29: 'torch', 30: 'statue', 31: 'door_open',
+  32: 'wfloor', 33: 'wwall', 34: 'rug', 35: 'counter', 36: 'grave', // duplicate grave
+  37: 'pond', 38: 'roof', 39: 'sign', 40: 'waterfall',
+  41: 'rail', 42: 'telegraph', 43: 'campfire', 44: 'claim_marker',
+};
   const h = worldMap.length;
   const w = worldMap[0].length;
   const baseData = new Array(w * h).fill(0);
@@ -163,8 +173,8 @@ export class ScreenMap {
     return { sx: tx * TILE, sy: ty * TILE, w: TILE, h: TILE };
   }
 
-  render(ctx, camera, layers = ['base', 'fg']) {
-    if (!this.tileImage) return;
+  // Use procedural sprites from SPR.tiles
+  render(ctx, camera, layers = ['base']) {
     const { x: camX, y: camY } = camera.getRenderOffset();
     const startTx = Math.max(0, Math.floor(camX / TILE) - 1);
     const endTx = Math.min(16, Math.ceil((camX + PF_W) / TILE) + 1);
@@ -172,15 +182,16 @@ export class ScreenMap {
     const endTy = Math.min(11, Math.ceil((camY + PF_H) / TILE) + 1);
 
     for (const layer of layers) {
-      const d = layer === 'fg' ? [] : (layer === 'obj' ? this.objData : this.baseData);
+      const d = layer === 'obj' ? this.objData : this.baseData;
       if (!d.length) continue;
       for (let ty = startTy; ty < endTy; ty++) {
         for (let tx = startTx; tx < endTx; tx++) {
           const tid = d[ty * 16 + tx];
           if (tid === 0) continue;
-          const rect = this.getTileRect(tid);
-          if (!rect) continue;
-          ctx.drawImage(this.tileImage, rect.sx, rect.sy, rect.w, rect.h, tx * TILE - camX, ty * TILE - camY, TILE, TILE);
+          const spriteName = TileMap._tileIdToName[tid];
+          const sprite = TileMap._sprites?.[spriteName];
+          if (!sprite) continue;
+          ctx.drawImage(sprite, tx * TILE - camX, ty * TILE - camY, TILE, TILE);
         }
       }
     }

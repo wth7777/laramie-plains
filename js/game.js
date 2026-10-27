@@ -9,6 +9,9 @@ import { Player } from './core/Player.js';
 import { RectHitbox } from './core/Hitbox.js';
 import { SPR } from './core/Sprites.js';
 
+// Set procedural sprites for tilemap rendering
+TileMap.setSpriteSource(SPR.tiles);
+
 // ---- Game State ----
 const GameState = {
   TITLE: 'title',
