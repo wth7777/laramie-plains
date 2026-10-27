@@ -4,20 +4,14 @@
 // Mobile-first: uses Pointer Events with touch fallback
 // ============================================================
 export const Input = {
-  // Keyboard state: currently held keys
   keys: {},
-  // Keyboard keys pressed this frame (cleared each frame after update)
   pressed: {},
-  // Touch/pointer action buttons currently held
-  actionHeld: {},
-  // Touch/pointer action buttons pressed this frame (cleared each frame)
-  actionPressed: {},
-
   touch: {
     active: false,
     startX: 0, startY: 0,
     currentX: 0, currentY: 0,
     joystickId: null,
+    actionBtns: {},
     joyRadius: 0,
     maxDist: 0,
   },
@@ -49,22 +43,15 @@ export const Input = {
     return this.keys['ArrowUp'] || this.keys['KeyW'];
   },
   get down() {
-    if (this.touch.active) return this.touch.currentY > this.touch.startY + this.touch.maxDist * 0.3;
+    if (this.touch.active) return this.touch.currentY > this.touch.startY - this.touch.maxDist * 0.3;
     return this.keys['ArrowDown'] || this.keys['KeyS'];
   },
 
-  // Action buttons: true if pressed this frame (keyboard OR touch)
-  get attack() { return this.pressed['KeyZ'] || this.pressed['Space'] || this.actionPressed.attack; },
-  get item() { return this.pressed['KeyX'] || this.actionPressed.item; },
-  get dash() { return this.pressed['ShiftLeft'] || this.pressed['ShiftRight'] || this.actionPressed.dash; },
-  get start() { return this.pressed['Enter'] || this.actionPressed.start || this.actionHeld.start; },
-  get select() { return this.pressed['KeyM'] || this.actionPressed.select; },
-
-  // Held state for continuous actions (e.g., movement)
-  get attackHeld() { return this.keys['KeyZ'] || this.keys['Space'] || this.actionHeld.attack; },
-  get itemHeld() { return this.keys['KeyX'] || this.actionHeld.item; },
-  get startHeld() { return this.keys['Enter'] || this.actionHeld.start; },
-  get selectHeld() { return this.keys['KeyM'] || this.actionHeld.select; },
+  get attack() { return this.pressed['KeyZ'] || this.pressed['Space'] || this.touch.actionBtns.attack; },
+  get item() { return this.pressed['KeyX'] || this.touch.actionBtns.item; },
+  get dash() { return this.pressed['ShiftLeft'] || this.pressed['ShiftRight'] || this.touch.actionBtns.dash; },
+  get start() { return this.pressed['Enter'] || this.touch.actionBtns.start; },
+  get select() { return this.pressed['KeyM'] || this.touch.actionBtns.select; },
 
   init() {
     // Keyboard
@@ -75,11 +62,12 @@ export const Input = {
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
 
-    // Joystick
+    // Touch controls are now always visible via HTML class="visible"
     const joyBase = document.getElementById('joy-base');
     const joyStick = document.getElementById('joy-stick');
 
     if (joyBase && joyStick) {
+      // Calculate radius from actual rendered size
       const updateRadius = () => {
         const rect = joyBase.getBoundingClientRect();
         this.touch.joyRadius = Math.min(rect.width, rect.height) / 2;
@@ -89,7 +77,7 @@ export const Input = {
       window.addEventListener('resize', updateRadius);
       window.addEventListener('orientationchange', () => setTimeout(updateRadius, 100));
 
-      // Pointer Events (unified touch/mouse/pen)
+      // Use Pointer Events for unified touch/mouse/pen handling
       const pointerDown = (e) => {
         if (e.target !== joyBase && !joyBase.contains(e.target)) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -130,127 +118,106 @@ export const Input = {
         try { joyBase.releasePointerCapture(e.pointerId); } catch {}
       };
 
+      // Pointer events (modern, unified)
       joyBase.addEventListener('pointerdown', pointerDown, { passive: false });
       window.addEventListener('pointermove', pointerMove, { passive: false });
       window.addEventListener('pointerup', pointerUp, { passive: false });
       window.addEventListener('pointercancel', pointerUp, { passive: false });
       window.addEventListener('pointerleave', pointerUp, { passive: false });
 
-      // Touch fallback ONLY if PointerEvent not supported
-      if (!window.PointerEvent) {
-        joyBase.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          const touch = e.changedTouches[0];
-          const rect = joyBase.getBoundingClientRect();
-          const x = touch.clientX - rect.left - rect.width / 2;
-          const y = touch.clientY - rect.top - rect.height / 2;
-          if (x * x + y * y <= this.touch.joyRadius * this.touch.joyRadius && !this.touch.joystickId) {
-            this.touch.active = true;
-            this.touch.joystickId = touch.identifier;
-            this.touch.startX = x; this.touch.startY = y;
+      // Fallback touch events for older browsers
+      joyBase.addEventListener('touchstart', (e) => {
+        if (window.PointerEvent) return; // Skip if Pointer Events supported
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        const rect = joyBase.getBoundingClientRect();
+        const x = touch.clientX - rect.left - rect.width / 2;
+        const y = touch.clientY - rect.top - rect.height / 2;
+        if (x * x + y * y <= this.touch.joyRadius * this.touch.joyRadius && !this.touch.joystickId) {
+          this.touch.active = true;
+          this.touch.joystickId = touch.identifier;
+          this.touch.startX = x; this.touch.startY = y;
+          this.touch.currentX = x; this.touch.currentY = y;
+          joyStick.classList.add('active');
+          this.updateStick(x, y, joyStick);
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!this.touch.active || window.PointerEvent) return;
+        for (const touch of e.changedTouches) {
+          if (touch.identifier === this.touch.joystickId) {
+            e.preventDefault();
+            const rect = joyBase.getBoundingClientRect();
+            const x = touch.clientX - rect.left - rect.width / 2;
+            const y = touch.clientY - rect.top - rect.height / 2;
             this.touch.currentX = x; this.touch.currentY = y;
-            joyStick.classList.add('active');
             this.updateStick(x, y, joyStick);
           }
-        }, { passive: false });
+        }
+      }, { passive: false });
 
-        window.addEventListener('touchmove', (e) => {
-          if (!this.touch.active) return;
-          for (const touch of e.changedTouches) {
-            if (touch.identifier === this.touch.joystickId) {
-              e.preventDefault();
-              const rect = joyBase.getBoundingClientRect();
-              const x = touch.clientX - rect.left - rect.width / 2;
-              const y = touch.clientY - rect.top - rect.height / 2;
-              this.touch.currentX = x; this.touch.currentY = y;
-              this.updateStick(x, y, joyStick);
-            }
+      window.addEventListener('touchend', (e) => {
+        if (window.PointerEvent) return;
+        for (const touch of e.changedTouches) {
+          if (touch.identifier === this.touch.joystickId) {
+            e.preventDefault();
+            this.touch.active = false;
+            this.touch.joystickId = null;
+            joyStick.classList.remove('active');
+            joyStick.style.transform = 'translate(-50%, -50%)';
           }
-        }, { passive: false });
+        }
+      }, { passive: false });
 
-        window.addEventListener('touchend', (e) => {
-          for (const touch of e.changedTouches) {
-            if (touch.identifier === this.touch.joystickId) {
-              e.preventDefault();
-              this.touch.active = false;
-              this.touch.joystickId = null;
-              joyStick.classList.remove('active');
-              joyStick.style.transform = 'translate(-50%, -50%)';
-            }
+      window.addEventListener('touchcancel', (e) => {
+        if (window.PointerEvent) return;
+        for (const touch of e.changedTouches) {
+          if (touch.identifier === this.touch.joystickId) {
+            this.touch.active = false;
+            this.touch.joystickId = null;
+            joyStick.classList.remove('active');
+            joyStick.style.transform = 'translate(-50%, -50%)';
           }
-        }, { passive: false });
-
-        window.addEventListener('touchcancel', (e) => {
-          for (const touch of e.changedTouches) {
-            if (touch.identifier === this.touch.joystickId) {
-              this.touch.active = false;
-              this.touch.joystickId = null;
-              joyStick.classList.remove('active');
-              joyStick.style.transform = 'translate(-50%, -50%)';
-            }
-          }
-        }, { passive: false });
-      }
+        }
+      }, { passive: false });
     }
 
-    // Action buttons - Pointer Events with touch fallback
-    const bindBtn = (id, key, actionName) => {
+    // Action buttons - use Pointer Events with touch fallback
+    const bindBtn = (id, key, action) => {
       const el = document.getElementById(id);
-      if (!el) {
-        console.warn('[Input] Button not found:', id);
-        return;
-      }
-      console.log('[Input] Bound button:', id, '->', actionName);
-      if (id === 'btn-start') {
-        if (window.__diagUpdate) window.__diagUpdate('startBound', true);
-      }
+      if (!el) return;
 
       const press = (e) => {
         if (e.type.startsWith('pointer') && e.pointerType === 'mouse' && e.button !== 0) return;
         e.preventDefault();
-        console.log('[Input] Press:', actionName, 'type:', e.type, 'pointerType:', e.pointerType);
-        if (actionName === 'start' && window.__diagUpdate) {
-          window.__diagUpdate('pointerDownReceived', true);
-        }
-        // Keyboard mirror
         this.pressed[key] = true;
         this.keys[key] = true;
-        // Touch/pointer action state
-        this.actionHeld[actionName] = true;
-        this.actionPressed[actionName] = true;
+        this.touch.actionBtns[e.pointerId || 0] = action;
         el.classList.add('pressed');
       };
-
       const release = (e) => {
         if (e.type.startsWith('pointer') && e.pointerType === 'mouse' && e.button !== 0) return;
-        // Only release on pointerleave for mouse, not for touch/pen
-        if (e.type === 'pointerleave' && e.pointerType !== 'mouse') return;
-        console.log('[Input] Release:', actionName, 'type:', e.type, 'pointerType:', e.pointerType);
-        if (actionName === 'start' && window.__diagUpdate) {
-          window.__diagUpdate('pointerUpReceived', true);
-        }
-        // Keyboard mirror
         this.keys[key] = false;
-        // Touch/pointer action state
-        this.actionHeld[actionName] = false;
+        delete this.touch.actionBtns[e.pointerId || 0];
         el.classList.remove('pressed');
       };
 
-      // Pointer events (primary)
+      // Pointer events
       el.addEventListener('pointerdown', press, { passive: false });
       el.addEventListener('pointerup', release, { passive: false });
       el.addEventListener('pointercancel', release, { passive: false });
-      // pointerleave only for mouse (touch/pen use pointerup/cancel)
-      el.addEventListener('pointerleave', (e) => {
-        if (e.pointerType === 'mouse') release(e);
-      }, { passive: false });
+      el.addEventListener('pointerleave', release, { passive: false });
 
-      // Touch fallback ONLY if no PointerEvent support
-      if (!window.PointerEvent) {
-        el.addEventListener('touchstart', press, { passive: false });
-        el.addEventListener('touchend', release, { passive: false });
-        el.addEventListener('touchcancel', release, { passive: false });
-      }
+      // Touch fallback
+      el.addEventListener('touchstart', press, { passive: false });
+      el.addEventListener('touchend', release, { passive: false });
+      el.addEventListener('touchcancel', release, { passive: false });
+
+      // Mouse fallback (for desktop testing)
+      el.addEventListener('mousedown', press);
+      el.addEventListener('mouseup', release);
+      el.addEventListener('mouseleave', release);
     };
 
     bindBtn('btn-b', 'KeyZ', 'attack');
@@ -262,10 +229,7 @@ export const Input = {
     const tc = document.getElementById('touch-controls');
     if (tc) {
       tc.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-      // Only add pointermove prevention if PointerEvent exists
-      if (window.PointerEvent) {
-        tc.addEventListener('pointermove', e => e.preventDefault(), { passive: false });
-      }
+      tc.addEventListener('pointermove', e => e.preventDefault(), { passive: false });
     }
   },
 
@@ -280,9 +244,5 @@ export const Input = {
     }
   },
 
-  // Call at END of frame after game logic has consumed input
-  flush() {
-    this.pressed = {};
-    this.actionPressed = {};
-  }
+  flush() { this.pressed = {}; }
 };
