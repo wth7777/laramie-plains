@@ -175,42 +175,47 @@ function makeScreenMap(charMap) {
 
 // ---- Init ----
 async function init() {
-  canvas = document.getElementById('game');
-  ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
+  try {
+    canvas = document.getElementById('game');
+    ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
 
-  updateDiag('jsInitialized', true);
+    // Check START button element
+    const startBtn = document.getElementById('btn-start');
+    updateDiag('startElementFound', !!startBtn);
+    if (startBtn) {
+      debugLog('[DIAG] START button element found');
+    } else {
+      debugLog('[DIAG] ERROR: START button element NOT found');
+      updateDiag('lastError', 'START button missing from DOM');
+    }
 
-  // Check START button element
-  const startBtn = document.getElementById('btn-start');
-  updateDiag('startElementFound', !!startBtn);
-  if (startBtn) {
-    debugLog('[DIAG] START button element found');
-  } else {
-    debugLog('[DIAG] ERROR: START button element NOT found');
-    updateDiag('lastError', 'START button missing from DOM');
+    // Input
+    Input.init();
+
+    // Create map
+    currentMap = makeScreenMap(DOWNTOWN_TILES);
+    await currentMap.loadTileset('data:image/png;base64,' + generateTilesetPNG());
+
+    // Camera
+    const mapW = currentMap.w * TILE;
+    const mapH = currentMap.h * TILE;
+    camera = new Camera(mapW, mapH);
+
+    // Player spawn at path center
+    player = new Player(mapW / 2, mapH / 2);
+    player.sprites = SPR.fox;
+    camera.snap(player.x, player.y);
+
+    updateDiag('jsInitialized', true);
+    debugLog('[LARAMIE] Initialized');
+
+    requestAnimationFrame(gameLoop);
+  } catch (e) {
+    console.error('[init] Error:', e);
+    updateDiag('lastError', 'init error: ' + e.message);
+    updateDiag('jsInitialized', false);
   }
-
-  // Input
-  Input.init();
-
-  // Create map
-  currentMap = makeScreenMap(DOWNTOWN_TILES);
-  await currentMap.loadTileset('data:image/png;base64,' + generateTilesetPNG());
-
-  // Camera
-  const mapW = currentMap.w * TILE;
-  const mapH = currentMap.h * TILE;
-  camera = new Camera(mapW, mapH);
-
-  // Player spawn at path center
-  player = new Player(mapW / 2, mapH / 2);
-  player.sprites = SPR.fox;
-  camera.snap(player.x, player.y);
-
-  debugLog('[LARAMIE] Initialized');
-
-  requestAnimationFrame(gameLoop);
 }
 
 // Generate a simple tileset PNG programmatically
