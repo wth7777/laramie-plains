@@ -34,12 +34,68 @@ let toastMsg = '', toastTimer = 0;
 
 // Debug
 const DEBUG_LOG = [];
+const DIAG = {
+  jsInitialized: false,
+  startElementFound: false,
+  startBound: false,
+  pointerDownReceived: false,
+  pointerUpReceived: false,
+  startActionRecognized: false,
+  titleHandlerCalled: false,
+  gameState: 'title',
+  lastError: null,
+};
+
 function debugLog(...args) {
   const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
   DEBUG_LOG.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
   if (DEBUG_LOG.length > 20) DEBUG_LOG.shift();
   console.log(...args);
 }
+
+function updateDiag(key, value) {
+  if (DIAG.hasOwnProperty(key)) {
+    DIAG[key] = value;
+  }
+  renderDiagPanel();
+}
+
+function renderDiagPanel() {
+  let panel = document.getElementById('diag-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'diag-panel';
+    panel.style.cssText = `
+      position: fixed; top: 8px; right: 8px; left: 8px; z-index: 9999;
+      background: rgba(0,0,0,0.9); color: #0f0; font: 11px monospace;
+      padding: 8px; border-radius: 4px; border: 1px solid #0f0;
+      pointer-events: none; white-space: pre-wrap; max-height: 50vh;
+      overflow-y: auto; line-height: 1.4;
+    `;
+    document.body.appendChild(panel);
+  }
+  const lines = [
+    '=== LARAMIE INPUT DIAG ===',
+    `JS Initialized: ${DIAG.jsInitialized ? 'YES' : 'NO'}`,
+    `START element found: ${DIAG.startElementFound ? 'YES' : 'NO'}`,
+    `START bound: ${DIAG.startBound ? 'YES' : 'NO'}`,
+    `Pointer DOWN: ${DIAG.pointerDownReceived ? 'YES' : 'NO'}`,
+    `Pointer UP: ${DIAG.pointerUpReceived ? 'YES' : 'NO'}`,
+    `START action recognized: ${DIAG.startActionRecognized ? 'YES' : 'NO'}`,
+    `Title handler called: ${DIAG.titleHandlerCalled ? 'YES' : 'NO'}`,
+    `Game state: ${DIAG.gameState}`,
+    `Input.start getter: ${Input.start ? 'TRUE' : 'FALSE'}`,
+    `Input.pressed.Enter: ${Input.pressed.Enter ? 'TRUE' : 'FALSE'}`,
+    `Input.keys.Enter: ${Input.keys.Enter ? 'TRUE' : 'FALSE'}`,
+    `Input.actionPressed.start: ${Input.actionPressed && Input.actionPressed.start ? 'TRUE' : 'FALSE'}`,
+    `Input.actionHeld.start: ${Input.actionHeld && Input.actionHeld.start ? 'TRUE' : 'FALSE'}`,
+  ];
+  if (DIAG.lastError) lines.push(`ERROR: ${DIAG.lastError}`);
+  panel.textContent = lines.join('\n');
+}
+
+// Expose for Input.js
+window.__diagUpdate = updateDiag;
 
 // Solid tiles (walkable whitelist approach - inverted)
 const SOLID_TILES = new Set([
@@ -108,6 +164,18 @@ async function init() {
   canvas = document.getElementById('game');
   ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
+
+  updateDiag('jsInitialized', true);
+
+  // Check START button element
+  const startBtn = document.getElementById('btn-start');
+  updateDiag('startElementFound', !!startBtn);
+  if (startBtn) {
+    debugLog('[DIAG] START button element found');
+  } else {
+    debugLog('[DIAG] ERROR: START button element NOT found');
+    updateDiag('lastError', 'START button missing from DOM');
+  }
 
   // Input
   Input.init();
@@ -180,7 +248,10 @@ function update(dt) {
 }
 
 function updateTitle(dt) {
+  updateDiag('gameState', 'title');
+  updateDiag('titleHandlerCalled', true);
   if (Input.start || Input.attack) {
+    updateDiag('startActionRecognized', true);
     startGame();
   }
 }
@@ -195,6 +266,7 @@ function startGame() {
 }
 
 function updatePlay(dt) {
+  updateDiag('gameState', 'play');
   // Player update
   player.update(dt, currentMap, SOLID_TILES);
 
@@ -218,12 +290,14 @@ function updateScroll(dt) {
 }
 
 function updateFade(dt) {
+  updateDiag('gameState', 'fade');
   fadeAlpha += fadeDir * dt * 2;
   if (fadeAlpha <= 0) { fadeAlpha = 0; fadeDir = 0; if (fadeCb) { fadeCb(); fadeCb = null; } }
   else if (fadeAlpha >= 1) { fadeAlpha = 1; }
 }
 
 function updateDialog(dt) {
+  updateDiag('gameState', 'dialog');
   if (Input.attack || Input.item) {
     dialogPage++;
     if (dialogPage >= dialogPages.length) {
@@ -233,10 +307,12 @@ function updateDialog(dt) {
 }
 
 function updatePause(dt) {
+  updateDiag('gameState', 'pause');
   if (Input.start) state = GameState.PLAY;
 }
 
 function updateGameover(dt) {
+  updateDiag('gameState', 'gameover');
   if (Input.attack) { state = GameState.TITLE; player.health = player.maxHealth; }
 }
 

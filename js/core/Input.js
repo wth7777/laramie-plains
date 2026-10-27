@@ -201,11 +201,17 @@ export const Input = {
         return;
       }
       console.log('[Input] Bound button:', id, '->', actionName);
+      if (id === 'btn-start') {
+        if (window.__diagUpdate) window.__diagUpdate('startBound', true);
+      }
 
       const press = (e) => {
         if (e.type.startsWith('pointer') && e.pointerType === 'mouse' && e.button !== 0) return;
         e.preventDefault();
         console.log('[Input] Press:', actionName, 'type:', e.type, 'pointerType:', e.pointerType);
+        if (actionName === 'start' && window.__diagUpdate) {
+          window.__diagUpdate('pointerDownReceived', true);
+        }
         // Keyboard mirror
         this.pressed[key] = true;
         this.keys[key] = true;
@@ -220,6 +226,9 @@ export const Input = {
         // Only release on pointerleave for mouse, not for touch/pen
         if (e.type === 'pointerleave' && e.pointerType !== 'mouse') return;
         console.log('[Input] Release:', actionName, 'type:', e.type, 'pointerType:', e.pointerType);
+        if (actionName === 'start' && window.__diagUpdate) {
+          window.__diagUpdate('pointerUpReceived', true);
+        }
         // Keyboard mirror
         this.keys[key] = false;
         // Touch/pointer action state
