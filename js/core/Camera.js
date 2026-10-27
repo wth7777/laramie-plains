@@ -2,7 +2,7 @@
 // LARAMIE — core/Camera.js
 // Smooth follow camera with deadzone and screen transitions
 // ============================================================
-export const PF_W = 256, PF_H = 176; // playfield size (16×11 tiles)
+export const PF_W = 512, PF_H = 448; // playfield size (32×28 tiles at 16px)
 
 export class Camera {
   constructor(worldW, worldH) {

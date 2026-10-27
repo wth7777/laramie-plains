@@ -53,7 +53,7 @@ canvas {
 }
 
 .joy-base {
-  width: 90px; height: 90px;
+  width: 120px; height: 120px;
   border-radius: 50%;
   background: rgba(20,24,38,0.85);
   border: 3px solid rgba(120,140,180,0.7);
@@ -66,7 +66,7 @@ canvas {
   content: '';
   position: absolute;
   left: 50%; top: 50%;
-  width: 60px; height: 2px;
+  width: 80px; height: 2px;
   background: rgba(100,120,160,0.3);
   transform: translate(-50%, -50%);
 }
@@ -74,7 +74,7 @@ canvas {
   content: '';
   position: absolute;
   left: 50%; top: 50%;
-  width: 2px; height: 60px;
+  width: 2px; height: 80px;
   background: rgba(100,120,160,0.3);
   transform: translate(-50%, -50%);
 }
@@ -82,7 +82,7 @@ canvas {
 .joy-stick {
   position: absolute;
   left: 50%; top: 50%;
-  width: 36px; height: 36px;
+  width: 48px; height: 48px;
   border-radius: 50%;
   background: rgba(140,160,200,0.6);
   border: 2px solid rgba(120,140,180,0.8);
@@ -105,12 +105,12 @@ canvas {
 .btn-row { display: flex; gap: 8px; align-items: center; }
 
 .btn-b {
-  width: 56px; height: 56px;
+  width: 72px; height: 72px;
   border-radius: 50%;
   background: rgba(20,24,38,0.85);
   border: 3px solid rgba(200,60,60,0.7);
   color: #fff;
-  font: bold 24px monospace;
+  font: bold 28px monospace;
   display: flex; align-items: center; justify-content: center;
 }
 .btn-b:active, .btn-b.pressed {
@@ -119,12 +119,12 @@ canvas {
 }
 
 .btn-a {
-  width: 56px; height: 56px;
+  width: 72px; height: 72px;
   border-radius: 50%;
   background: rgba(20,24,38,0.85);
   border: 3px solid rgba(60,180,80,0.7);
   color: #fff;
-  font: bold 24px monospace;
+  font: bold 28px monospace;
   display: flex; align-items: center; justify-content: center;
 }
 .btn-a:active, .btn-a.pressed {
@@ -133,12 +133,12 @@ canvas {
 }
 
 .btn-sys {
-  width: 72px; height: 36px;
-  border-radius: 18px;
+  width: 96px; height: 44px;
+  border-radius: 22px;
   background: rgba(20,24,38,0.85);
   border: 2px solid rgba(120,140,180,0.7);
   color: #9fb4d8;
-  font: bold 11px monospace;
+  font: bold 13px monospace;
   letter-spacing: 1px;
 }
 .btn-start { border-color: rgba(200,180,60,0.7); }

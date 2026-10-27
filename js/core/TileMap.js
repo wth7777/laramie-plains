@@ -208,4 +208,4 @@ export class ScreenMap {
 }
 
 // PF_W/PF_H re-export
-export const PF_W = 256, PF_H = 176;
+export const PF_W = 512, PF_H = 448;

@@ -59,13 +59,14 @@ export const Input = {
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
 
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isMobile = window.innerWidth <= 768 || window.innerHeight <= 768;
     const tc = document.getElementById('touch-controls');
-    if (isTouch && tc) tc.classList.add('visible');
+    if ((isTouch || isMobile) && tc) tc.classList.add('visible');
 
     const joyBase = document.getElementById('joy-base');
     const joyStick = document.getElementById('joy-stick');
-    const joyRadius = 36;
-    const maxDist = joyRadius * 0.65;
+    const joyRadius = 48; // larger for 2x screen
+    const maxDist = joyRadius * 0.7;
 
     if (joyBase && joyStick) {
       joyBase.addEventListener('touchstart', e => {
