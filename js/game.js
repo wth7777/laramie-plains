@@ -153,14 +153,14 @@ const DOWNTOWN_TILES = [
 ];
 
 const CHAR_TILE = {
-  '.': 'grass', ',': 'flowers', 'S': 'sagebrush', 'C': 'cottonwood', '~': 'river',
-  's': 'sand', 'R': 'rock', 'B': 'bush', 'P': 'path', 'X': 'crack', '=': 'bridge',
-  'F': 'fence', 'H': 'hwall', 'D': 'hdoor', 'O': 'cave', 'U': 'stump',
-  'V': 'roof', 'g': 'sign', 'f': 'waterfall', 'p': 'pond', 'G': 'grave',
-  '#': 'dwall', '_': 'dfloor', 'L': 'door_lock', 'K': 'door_boss',
-  'Z': 'door_shut', '>': 'stairs', 'c': 'dcrack', 't': 'torch', 'A': 'statue',
-  'o': 'door_open', 'w': 'wfloor', 'h': 'wwall', 'r': 'rug', 'n': 'counter',
-  'T': 'telegraph', '*': 'campfire', 'M': 'claim_marker',
+  '.': 1, ',': 2, 'S': 3, 'C': 4, '~': 5,
+  's': 6, 'R': 7, 'B': 8, 'P': 9, 'X': 10, '=': 11,
+  'F': 12, 'H': 13, 'D': 14, 'O': 15, 'U': 16,
+  'V': 17, 'g': 18, 'f': 19, 'p': 20, 'G': 21,
+  '#': 22, '_': 23, 'L': 24, 'K': 25,
+  'Z': 26, '>': 27, 'c': 28, 't': 29, 'A': 30,
+  'o': 31, 'w': 32, 'h': 33, 'r': 34, 'n': 35,
+  'T': 41, '*': 43, 'M': 44,
 };
 
 // Convert char map to ScreenMap
