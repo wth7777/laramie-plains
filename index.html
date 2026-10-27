@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>LARAMIE: PLAINS OF THE LOST</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="256" height="224"></canvas>
+  <div id="hint">PRESS <b>START</b> TO BEGIN</div>
+  <div id="touch-controls">
+    <div class="controls-inner">
+      <div class="joy-base" id="joy-base">
+        <div class="joy-stick" id="joy-stick"></div>
+      </div>
+      <div class="btn-cluster">
+        <div class="btn-row">
+          <button type="button" class="btn-a" id="btn-a" aria-label="Item">A</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn-b" id="btn-b" aria-label="Attack">B</button>
+          <button type="button" class="btn-sys btn-start" id="btn-start" aria-label="Menu">START</button>
+          <button type="button" class="btn-sys btn-select" id="btn-select" aria-label="Map">SELECT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
