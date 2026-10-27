@@ -57,7 +57,7 @@ export const Input = {
   get attack() { return this.pressed['KeyZ'] || this.pressed['Space'] || this.actionPressed.attack; },
   get item() { return this.pressed['KeyX'] || this.actionPressed.item; },
   get dash() { return this.pressed['ShiftLeft'] || this.pressed['ShiftRight'] || this.actionPressed.dash; },
-  get start() { return this.pressed['Enter'] || this.actionPressed.start; },
+  get start() { return this.pressed['Enter'] || this.actionPressed.start || this.actionHeld.start; },
   get select() { return this.pressed['KeyM'] || this.actionPressed.select; },
 
   // Held state for continuous actions (e.g., movement)

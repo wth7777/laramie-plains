@@ -237,6 +237,7 @@ function gameLoop(time) {
     if (window.__diagUpdate) window.__diagUpdate('loopError', e.message);
   }
 
+  // Always schedule next frame regardless of errors
   requestAnimationFrame(gameLoop);
 }
 
