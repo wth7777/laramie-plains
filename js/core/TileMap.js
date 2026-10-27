@@ -36,9 +36,9 @@ export class TileMap {
   // Set tile (for dynamic changes like opening doors)
   setTile(tx, ty, id, layer = 'base') {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return;
-    if (layer === 'fg') this.fgData?.[ty * this.w + tx] = id;
-    else if (layer === 'obj') this.objData?.[ty * this.w + tx] = id;
-    else this.data[ty * this.w + tx] = id;
+    if (layer === 'fg' && this.fgData) this.fgData[ty * this.w + tx] = id;
+    else if (layer === 'obj' && this.objData) this.objData[ty * this.w + tx] = id;
+    else if (layer === 'base') this.data[ty * this.w + tx] = id;
   }
 
   // Check if tile is solid (uses object layer or base)
