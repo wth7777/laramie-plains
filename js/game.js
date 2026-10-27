@@ -44,6 +44,11 @@ const DIAG = {
   titleHandlerCalled: false,
   gameState: 'title',
   lastError: null,
+  updateCalled: false,
+  actualState: 'unknown',
+  expectedState: 'title',
+  switchMatched: 'unknown',
+  updateError: null,
 };
 
 function debugLog(...args) {
@@ -84,6 +89,10 @@ function renderDiagPanel() {
     `START action recognized: ${DIAG.startActionRecognized ? 'YES' : 'NO'}`,
     `Title handler called: ${DIAG.titleHandlerCalled ? 'YES' : 'NO'}`,
     `Game state: ${DIAG.gameState}`,
+    `update() called: ${DIAG.updateCalled ? 'YES' : 'NO'}`,
+    `actual state: ${DIAG.actualState}`,
+    `expected state: ${DIAG.expectedState}`,
+    `switch matched: ${DIAG.switchMatched}`,
     `Input.start getter: ${Input.start ? 'TRUE' : 'FALSE'}`,
     `Input.pressed.Enter: ${Input.pressed.Enter ? 'TRUE' : 'FALSE'}`,
     `Input.keys.Enter: ${Input.keys.Enter ? 'TRUE' : 'FALSE'}`,
@@ -91,6 +100,7 @@ function renderDiagPanel() {
     `Input.actionHeld.start: ${Input.actionHeld && Input.actionHeld.start ? 'TRUE' : 'FALSE'}`,
   ];
   if (DIAG.lastError) lines.push(`ERROR: ${DIAG.lastError}`);
+  if (DIAG.updateError) lines.push(`UPDATE ERROR: ${DIAG.updateError}`);
   panel.textContent = lines.join('\n');
 }
 
@@ -217,28 +227,41 @@ function gameLoop(time) {
 
 // ---- Update ----
 function update(dt) {
-  switch (state) {
-    case GameState.TITLE:
-      updateTitle(dt);
-      break;
-    case GameState.PLAY:
-      updatePlay(dt);
-      break;
-    case GameState.SCROLL:
-      updateScroll(dt);
-      break;
-    case GameState.FADE:
-      updateFade(dt);
-      break;
-    case GameState.DIALOG:
-      updateDialog(dt);
-      break;
-    case GameState.PAUSE:
-      updatePause(dt);
-      break;
-    case GameState.GAMEOVER:
-      updateGameover(dt);
-      break;
+  // Diagnostic: track that update() is being called
+  if (window.__diagUpdate) window.__diagUpdate('updateCalled', true);
+  if (window.__diagUpdate) window.__diagUpdate('actualState', state);
+  if (window.__diagUpdate) window.__diagUpdate('expectedState', GameState.TITLE);
+
+  try {
+    switch (state) {
+      case GameState.TITLE:
+        if (window.__diagUpdate) window.__diagUpdate('switchMatched', 'TITLE');
+        updateTitle(dt);
+        break;
+      case GameState.PLAY:
+        updatePlay(dt);
+        break;
+      case GameState.SCROLL:
+        updateScroll(dt);
+        break;
+      case GameState.FADE:
+        updateFade(dt);
+        break;
+      case GameState.DIALOG:
+        updateDialog(dt);
+        break;
+      case GameState.PAUSE:
+        updatePause(dt);
+        break;
+      case GameState.GAMEOVER:
+        updateGameover(dt);
+        break;
+      default:
+        if (window.__diagUpdate) window.__diagUpdate('switchMatched', 'NONE - state=' + state);
+    }
+  } catch (e) {
+    if (window.__diagUpdate) window.__diagUpdate('lastError', 'update() error: ' + e.message);
+    console.error('[update] Error:', e);
   }
 
   if (toastTimer > 0) toastTimer -= dt;
