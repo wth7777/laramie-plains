@@ -28,6 +28,7 @@ let canvas, ctx;
 let camera, player, currentMap;
 let currentScreen = { map: 'overworld', sx: 2, sy: 2 };
 let lastTime = 0;
+let loopFrame = 0;
 let fadeAlpha = 1, fadeDir = -1, fadeCb = null;
 let dialogText = '', dialogPage = 0, dialogPages = [];
 let toastMsg = '', toastTimer = 0;
@@ -51,6 +52,7 @@ const DIAG = {
   updateError: null,
   frameCount: 0,
   loopError: null,
+  loopFrame: 0,
 };
 
 function debugLog(...args) {
@@ -93,6 +95,7 @@ function renderDiagPanel() {
     `Game state: ${DIAG.gameState}`,
     `update() called: ${DIAG.updateCalled ? 'YES' : 'NO'}`,
     `frame count: ${DIAG.frameCount}`,
+    `loop frame: ${DIAG.loopFrame}`,
     `actual state: ${DIAG.actualState}`,
     `expected state: ${DIAG.expectedState}`,
     `switch matched: ${DIAG.switchMatched}`,
@@ -238,6 +241,8 @@ function gameLoop(time) {
   }
 
   // Always schedule next frame regardless of errors
+  loopFrame++;
+  if (window.__diagUpdate) window.__diagUpdate('loopFrame', loopFrame);
   requestAnimationFrame(gameLoop);
 }
 
