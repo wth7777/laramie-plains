@@ -109,15 +109,6 @@ async function init() {
   ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  // Fit canvas
-  function fit() {
-    const scale = Math.min(window.innerWidth / PF_W, (window.innerHeight - 60) / PF_H);
-    canvas.style.width = (PF_W * scale) + 'px';
-    canvas.style.height = (PF_H * scale) + 'px';
-  }
-  window.addEventListener('resize', fit);
-  fit();
-
   // Input
   Input.init();
 

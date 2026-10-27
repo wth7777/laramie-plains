@@ -1,0 +1,19 @@
+{
+  "name": "LARAMIE: Plains of the Lost",
+  "short_name": "Laramie Plains",
+  "description": "A Zelda-like adventure set in 1868 Laramie, Wyoming",
+  "start_url": "/laramie-plains/",
+  "scope": "/laramie-plains/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230b0d12' width='100' height='100'/><text x='50' y='65' font-size='50' text-anchor='middle'>🦊</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,65 +1,91 @@
-:root { color-scheme: dark; }
+:root {
+  color-scheme: dark;
+  --safe-top: env(safe-area-inset-top, 0);
+  --safe-bottom: env(safe-area-inset-bottom, 0);
+  --safe-left: env(safe-area-inset-left, 0);
+  --safe-right: env(safe-area-inset-right, 0);
+}
+
+* { box-sizing: border-box; }
+
 html, body {
-  margin: 0; padding: 0; height: 100%;
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
   background: #0b0d12;
-  display: flex; flex-direction: column; align-items: center;
   overflow: hidden;
   font-family: 'Courier New', monospace;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+
 #wrap {
   position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  touch-action: none;
   width: 100%;
-  max-width: 500px;
-  padding-bottom: 10px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--safe-top) + 4px) calc(var(--safe-left) + 4px) calc(var(--safe-bottom) + 4px) calc(var(--safe-right) + 4px);
+  gap: 4px;
+  touch-action: none;
 }
-canvas {
+
+canvas#game {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 512 / 448;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
-  box-shadow: 0 0 0 4px #1d2433, 0 0 60px rgba(80,140,255,.12), 0 24px 60px rgba(0,0,0,.6);
   border-radius: 2px;
+  box-shadow: 0 0 0 4px #1d2433, 0 0 60px rgba(80,140,255,.12), 0 24px 60px rgba(0,0,0,.6);
   touch-action: none;
-  width: 100%;
-  max-width: 95vw;
-  height: auto;
-  aspect-ratio: 512 / 448;
   display: block;
 }
+
 #hint {
-  color: #5a6a8a; font-size: 12px; letter-spacing: 1px; text-align: center;
-  user-select: none;
+  flex: 0 0 auto;
+  color: #5a6a8a;
+  font-size: clamp(10px, 2.5vw, 14px);
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 2px 8px;
+  white-space: nowrap;
 }
 #hint b { color: #9fb4d8; }
 
-/* ===== MOBILE TOUCH CONTROLS ===== */
+/* ===== MOBILE TOUCH CONTROLS - ALWAYS VISIBLE ===== */
 #touch-controls {
-  position: relative;
+  flex: 0 0 auto;
   width: 100%;
-  max-width: 500px;
-  height: 140px;
-  margin-top: 8px;
-  display: none;
+  max-width: 100%;
+  display: flex !important;
   pointer-events: auto;
   touch-action: none;
+  padding: 0 4px;
 }
-#touch-controls.visible { display: block; }
 
 .controls-inner {
   display: flex;
+  width: 100%;
   justify-content: space-between;
-  align-items: flex-end;
-  height: 100%;
-  padding: 0 12px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
 }
 
 .joy-base {
-  width: 120px; height: 120px;
+  width: clamp(100px, 22vw, 140px);
+  aspect-ratio: 1;
+  max-width: 140px;
   border-radius: 50%;
-  background: rgba(20,24,38,0.85);
-  border: 3px solid rgba(120,140,180,0.7);
+  background: rgba(20,24,38,0.9);
+  border: 3px solid rgba(120,140,180,0.8);
   pointer-events: auto;
   touch-action: none;
   position: relative;
@@ -69,26 +95,28 @@ canvas {
   content: '';
   position: absolute;
   left: 50%; top: 50%;
-  width: 80px; height: 2px;
-  background: rgba(100,120,160,0.3);
+  width: 60%; height: 2px;
+  background: rgba(100,120,160,0.4);
   transform: translate(-50%, -50%);
 }
 .joy-base::after {
   content: '';
   position: absolute;
   left: 50%; top: 50%;
-  width: 2px; height: 80px;
-  background: rgba(100,120,160,0.3);
+  width: 2px; height: 60%;
+  background: rgba(100,120,160,0.4);
   transform: translate(-50%, -50%);
 }
 
 .joy-stick {
   position: absolute;
   left: 50%; top: 50%;
-  width: 48px; height: 48px;
+  width: 40%;
+  aspect-ratio: 1;
+  max-width: 56px;
   border-radius: 50%;
-  background: rgba(140,160,200,0.6);
-  border: 2px solid rgba(120,140,180,0.8);
+  background: rgba(140,160,200,0.7);
+  border: 2px solid rgba(120,140,180,0.9);
   pointer-events: none;
   transform: translate(-50%, -50%);
   transition: transform 0.02s linear;
@@ -101,70 +129,92 @@ canvas {
 .btn-cluster {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
-.btn-row { display: flex; gap: 8px; align-items: center; }
+.btn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
 
-.btn-b {
-  width: 72px; height: 72px;
+.btn-a, .btn-b {
+  width: clamp(56px, 14vw, 80px);
+  aspect-ratio: 1;
+  max-width: 80px;
   border-radius: 50%;
-  background: rgba(20,24,38,0.85);
-  border: 3px solid rgba(200,60,60,0.7);
+  background: rgba(20,24,38,0.9);
   color: #fff;
-  font: bold 28px monospace;
+  font: bold clamp(18px, 5vw, 28px) monospace;
   display: flex; align-items: center; justify-content: center;
+  border: 3px solid;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.btn-b:active, .btn-b.pressed {
-  background: rgba(200,60,60,0.95);
-  border-color: rgba(240,100,100,1);
-}
-
-.btn-a {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: rgba(20,24,38,0.85);
-  border: 3px solid rgba(60,180,80,0.7);
-  color: #fff;
-  font: bold 28px monospace;
-  display: flex; align-items: center; justify-content: center;
-}
-.btn-a:active, .btn-a.pressed {
-  background: rgba(60,180,80,0.95);
-  border-color: rgba(100,220,120,1);
-}
+.btn-a { border-color: rgba(60,180,80,0.8); }
+.btn-a:active, .btn-a.pressed { background: rgba(60,180,80,0.95); border-color: rgba(100,220,120,1); }
+.btn-b { border-color: rgba(200,60,60,0.8); }
+.btn-b:active, .btn-b.pressed { background: rgba(200,60,60,0.95); border-color: rgba(240,100,100,1); }
 
 .btn-sys {
-  width: 96px; height: 44px;
-  border-radius: 22px;
-  background: rgba(20,24,38,0.85);
-  border: 2px solid rgba(120,140,180,0.7);
+  width: clamp(72px, 18vw, 100px);
+  height: clamp(36px, 8vw, 48px);
+  min-width: 72px;
+  border-radius: 999px;
+  background: rgba(20,24,38,0.9);
+  border: 2px solid;
   color: #9fb4d8;
-  font: bold 13px monospace;
-  letter-spacing: 1px;
+  font: bold clamp(10px, 2.5vw, 14px) monospace;
+  letter-spacing: 0.5px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.btn-start { border-color: rgba(200,180,60,0.7); }
+.btn-start { border-color: rgba(200,180,60,0.8); }
 .btn-start:active, .btn-start.pressed { background: rgba(200,180,60,0.95); border-color: rgba(240,220,100,1); }
-.btn-select { border-color: rgba(100,100,140,0.7); }
+.btn-select { border-color: rgba(100,100,140,0.8); }
 .btn-select:active, .btn-select.pressed { background: rgba(100,100,140,0.95); border-color: rgba(140,140,180,1); }
+
+/* Landscape adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  #wrap { gap: 2px; padding: 2px; }
+  #hint { font-size: 10px; padding: 1px 4px; }
+  #touch-controls { padding: 0 2px; }
+  .controls-inner { gap: 8px; padding: 4px 2px; }
+  .joy-base { width: clamp(80px, 15vh, 110px); }
+  .joy-stick { width: 38%; max-width: 44px; }
+  .btn-a, .btn-b { width: clamp(48px, 10vh, 64px); }
+  .btn-sys { width: clamp(60px, 12vh, 80px); height: clamp(32px, 6vh, 40px); }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .btn-sys { font-size: 10px; padding: 0 4px; }
+  .btn-row { gap: 4px; }
+}
+
+/* High-DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  canvas#game { image-rendering: -webkit-optimize-contrast; }
+}
+
+/* Focus visible for accessibility */
+button:focus-visible {
+  outline: 2px solid #9fb4d8;
+  outline-offset: 2px;
+}
 
 /* ===== DEBUG OVERLAY ===== */
 #debug-overlay {
   position: fixed;
-  bottom: 60px;
-  left: 10px;
-  right: 10px;
+  bottom: calc(var(--safe-bottom) + 60px);
+  left: calc(var(--safe-left) + 10px);
+  right: calc(var(--safe-right) + 10px);
   max-height: 180px;
   overflow-y: auto;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.9);
   border: 1px solid #334;
   border-radius: 4px;
   padding: 8px;
   font: 11px monospace;
   color: #ff4444;
-  z-index: 100;
+  z-index: 1000;
   pointer-events: none;
   white-space: pre-wrap;
-  font-family: monospace;
 }
