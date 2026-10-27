@@ -49,6 +49,8 @@ const DIAG = {
   expectedState: 'title',
   switchMatched: 'unknown',
   updateError: null,
+  frameCount: 0,
+  loopError: null,
 };
 
 function debugLog(...args) {
@@ -90,6 +92,7 @@ function renderDiagPanel() {
     `Title handler called: ${DIAG.titleHandlerCalled ? 'YES' : 'NO'}`,
     `Game state: ${DIAG.gameState}`,
     `update() called: ${DIAG.updateCalled ? 'YES' : 'NO'}`,
+    `frame count: ${DIAG.frameCount}`,
     `actual state: ${DIAG.actualState}`,
     `expected state: ${DIAG.expectedState}`,
     `switch matched: ${DIAG.switchMatched}`,
@@ -101,6 +104,7 @@ function renderDiagPanel() {
   ];
   if (DIAG.lastError) lines.push(`ERROR: ${DIAG.lastError}`);
   if (DIAG.updateError) lines.push(`UPDATE ERROR: ${DIAG.updateError}`);
+  if (DIAG.loopError) lines.push(`LOOP ERROR: ${DIAG.loopError}`);
   panel.textContent = lines.join('\n');
 }
 
@@ -217,11 +221,16 @@ function generateTilesetPNG() {
 
 // ---- Game Loop ----
 function gameLoop(time) {
-  const dt = Math.min((time - lastTime) / 1000, 0.05); // cap at 50ms
-  lastTime = time;
+  try {
+    const dt = Math.min((time - lastTime) / 1000, 0.05); // cap at 50ms
+    lastTime = time;
 
-  update(dt);
-  render();
+    update(dt);
+    render();
+  } catch (e) {
+    console.error('[gameLoop] Error:', e);
+    if (window.__diagUpdate) window.__diagUpdate('loopError', e.message);
+  }
 
   requestAnimationFrame(gameLoop);
 }
@@ -232,6 +241,7 @@ function update(dt) {
   if (window.__diagUpdate) window.__diagUpdate('updateCalled', true);
   if (window.__diagUpdate) window.__diagUpdate('actualState', state);
   if (window.__diagUpdate) window.__diagUpdate('expectedState', GameState.TITLE);
+  if (window.__diagUpdate) window.__diagUpdate('frameCount', DIAG.frameCount + 1);
 
   try {
     switch (state) {
@@ -261,7 +271,7 @@ function update(dt) {
         if (window.__diagUpdate) window.__diagUpdate('switchMatched', 'NONE - state=' + state);
     }
   } catch (e) {
-    if (window.__diagUpdate) window.__diagUpdate('lastError', 'update() error: ' + e.message);
+    if (window.__diagUpdate) window.__diagUpdate('updateError', 'update() error: ' + e.message);
     console.error('[update] Error:', e);
   }
 
