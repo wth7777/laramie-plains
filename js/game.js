@@ -153,25 +153,24 @@ const SOLID_TILES = new Set([
 const DOWNTOWN_TILES = [
   "################################",
   "#..............................#",
-  "#............BBBB..............#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............B........B.......#",
-  "#............BBBBBBBBBBBBBB....#",
-  "#............#........#.......#",
-  "#............#........#.......#",
-  "#............#........#.......#",
-  "#............#........#.......#",
-  "#............#........#.......#",
-  "#............#........#.......#",
-  "#............#........#.......#",
-  "#............BBBBBBBBBBBBBB....#",
+  "#..............................#",
+  "#........BBBBBBBBBBBBBB........#",
+  "#........B............B........#",
+  "#........B............B........#",
+  "#........B....BBBB....B........#",
+  "#........B....B..B....B........#",
+  "#........B....B..B....B........#",
+  "#........B....BB.B....B........#",
+  "#........B............B........#",
+  "#........B............B........#",
+  "#........BBBBBB..BBBBBB........#",
+  "#..............PP..............#",
+  "#..............PP..............#",
+  "#..............PP..............#",
+  "#..............PP..............#",
+  "#..............PP..............#",
+  "#..............................#",
+  "#..............................#",
   "#..............................#",
   "#..............................#",
   "#..............................#",
@@ -184,6 +183,7 @@ const DOWNTOWN_TILES = [
   "#..............................#",
   "################################",
 ];
+
 
 const CHAR_TILE = {
   '.': 1, ',': 2, 'S': 3, 'C': 4, '~': 5,
@@ -231,8 +231,10 @@ async function init() {
     const mapH = currentMap.h * TILE;
     camera = new Camera(mapW, mapH);
 
-    // Player spawn at path center
-    player = new Player(mapW / 2, mapH / 2);
+    // Player spawn on open path south of building (row 14, col 16 is 'P')
+    const spawnTX = 16;
+    const spawnTY = 14;
+    player = new Player(spawnTX * TILE + 8, spawnTY * TILE + 8);
     player.sprites = SPR.fox;
     camera.snap(player.x, player.y);
 
@@ -321,23 +323,32 @@ function update(dt) {
 function updateTitle(dt) {
   updateDiag('gameState', 'title');
   updateDiag('titleHandlerCalled', true);
-  if (Input.start || Input.attack) {
+  // EDGE only — use pressed[] not held Input.start / Input.attack
+  if (Input.pressed['Enter'] ||
+      Input.pressed['KeyZ'] ||
+      Input.pressed['Space'] ||
+      Input.pressed['KeyX']) {
     updateDiag('startActionRecognized', true);
     startGame();
   }
 }
 
 function startGame() {
-  state = GameState.FADE;
-  fadeAlpha = 1; fadeDir = -1;
-  fadeCb = () => {
-    state = GameState.PLAY;
-    showDialog("LARAMIE, 1868. THE UNION PACIFIC REACHES THESE PLAINS.\nYOU ARRIVE AS A SURVEYOR'S APPRENTICE...\nBUT THE LAND REMEMBERS JACQUES LA RAMEE.\nFIND THE TRAPPER AT VEDAUWOO.");
-  };
-  // Hide title hint
-  const hint = document.getElementById('hint');
-  if (hint) hint.style.display = 'none';
-}
+    if (state !== GameState.TITLE) return;
+    state = GameState.FADE;
+    fadeAlpha = 1;
+    fadeDir = -1;
+    fadeCb = () => {
+      showDialog(
+        "LARAMIE, 1868. THE UNION PACIFIC REACHES THESE PLAINS.\n" +
+        "YOU ARRIVE AS A SURVEYOR'S APPRENTICE...\n" +
+        "BUT THE LAND REMEMBERS JACQUES LA RAMEE.\n" +
+        "FIND THE TRAPPER AT VEDAUWOO."
+      );
+    };
+    const hint = document.getElementById('hint');
+    if (hint) hint.style.display = 'none';
+  }
 
 function updatePlay(dt) {
   updateDiag('gameState', 'play');
