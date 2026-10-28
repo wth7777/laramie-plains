@@ -12,8 +12,22 @@ export class Hitbox {
 
   // Check if a tile coordinate is solid
   static tileSolid(tx, ty, tilemap, solidSet) {
+    if (!tilemap) return false;
     if (tx < 0 || ty < 0 || tx >= tilemap.w || ty >= tilemap.h) return true;
-    const tid = tilemap.data[ty][tx];
+
+    let tid = 0;
+    if (typeof tilemap.getTile === 'function') {
+      // ScreenMap / modern API: prefer obj layer, fall back to base
+      tid = tilemap.getTile(tx, ty, 'obj') || tilemap.getTile(tx, ty, 'base') || 0;
+    } else if (tilemap.data) {
+      // legacy 2D or flat
+      const row = tilemap.data[ty];
+      tid = Array.isArray(row) ? (row[tx] || 0) : (tilemap.data[ty * tilemap.w + tx] || 0);
+    } else if (tilemap.objData || tilemap.baseData) {
+      const idx = ty * tilemap.w + tx;
+      tid = (tilemap.objData && tilemap.objData[idx]) || (tilemap.baseData && tilemap.baseData[idx]) || 0;
+    }
+    if (!tid) return false;
     return solidSet.has(tid);
   }
 

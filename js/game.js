@@ -115,12 +115,33 @@ function renderDiagPanel() {
 window.__diagUpdate = updateDiag;
 
 // Solid tiles (walkable whitelist approach - inverted)
+// Numeric tile IDs from CHAR_TILE that BLOCK movement
 const SOLID_TILES = new Set([
-  // Tiles that BLOCK movement
-  'bush', 'rock', 'fence', 'hwall', 'hdoor', 'cave', 'stump',
-  'dwall', 'door_lock', 'door_boss', 'door_shut', 'dcrack', 'torch', 'statue',
-  'wwall', 'counter', 'grave', 'pond', 'roof', 'sign', 'waterfall',
-  'rail', 'telegraph', 'campfire', 'claim_marker'
+  7,   // rock R
+  8,   // bush B
+  12,  // fence F
+  13,  // hwall H
+  14,  // hdoor D
+  15,  // cave O
+  16,  // stump U
+  17,  // roof V
+  18,  // sign g
+  19,  // waterfall f
+  20,  // pond p
+  21,  // grave G
+  22,  // dwall / # wall  <-- critical for downtown border
+  24,  // door_lock L
+  25,  // door_boss K
+  26,  // door_shut Z
+  28,  // dcrack c
+  29,  // torch t
+  30,  // statue A
+  33,  // wwall h
+  35,  // counter n
+  41,  // rail T
+  42,  // telegraph T (same as 41 in CHAR_TILE)
+  43,  // campfire *
+  44,  // claim_marker M
 ]);
 
 // ---- Map Data (from world.js CHAR_TILE) ----
@@ -308,6 +329,9 @@ function startGame() {
     state = GameState.PLAY;
     showDialog("LARAMIE, 1868. THE UNION PACIFIC REACHES THESE PLAINS.\nYOU ARRIVE AS A SURVEYOR'S APPRENTICE...\nBUT THE LAND REMEMBERS JACQUES LA RAMEE.\nFIND THE TRAPPER AT VEDAUWOO.");
   };
+  // Hide title hint
+  const hint = document.getElementById('hint');
+  if (hint) hint.style.display = 'none';
 }
 
 function updatePlay(dt) {

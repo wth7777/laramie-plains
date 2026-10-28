@@ -125,6 +125,15 @@ export class Player extends Entity {
     // Bow, bombs, etc.
   }
 
+  // Override move to maintain hitbox offset (LTTP-style hitbox is inset)
+  move(dx, dy, tilemap, solidTiles) {
+    const m = super.move(dx, dy, tilemap, solidTiles);
+    // Re-apply hitbox offset after base class syncs position
+    this.hitbox.x = this.x + 3;
+    this.hitbox.y = this.y + 6;
+    return m;
+  }
+
   updateAnim() {
     const stateAnimMap = {
       idle: 'idle',

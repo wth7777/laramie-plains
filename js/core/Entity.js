@@ -73,7 +73,13 @@ export class Entity {
 
   // Movement helper: try to move, returns actual movement
   move(dx, dy, tilemap, solidTiles) {
-    return this.hitbox.move(dx, dy, tilemap, solidTiles);
+    const m = this.hitbox.move(dx, dy, tilemap, solidTiles);
+    this.x += m.x;
+    this.y += m.y;
+    // Sync hitbox (it may have been moved partially due to collision)
+    this.hitbox.x = this.x;
+    this.hitbox.y = this.y;
+    return m;
   }
 
   // Take damage
