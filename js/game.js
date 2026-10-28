@@ -149,28 +149,29 @@ const SOLID_TILES = new Set([
 ]);
 
 // ---- Map Data (from world.js CHAR_TILE) ----
-// Simplified: just Downtown Laramie for testing (32x28 for 512x448)
+// Richer starter map: border walls, path, buildings, props
 const DOWNTOWN_TILES = [
   "################################",
   "#..............................#",
-  "#..............................#",
-  "#........PPPPPPPPPPPPPP........#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........P................P....#",
-  "#........PPPPPPPPPPPPPP........#",
-  "#..............................#",
-  "#..............................#",
-  "#..............................#",
-  "#..............................#",
-  "#..............................#",
-  "#..............................#",
-  "#..............................#",
+  "#............BBBB..............#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............B........B.......#",
+  "#............BBBBBBBBBBBBBB....#",
+  "#............#........#.......#",
+  "#............#........#.......#",
+  "#............#........#.......#",
+  "#............#........#.......#",
+  "#............#........#.......#",
+  "#............#........#.......#",
+  "#............#........#.......#",
+  "#............BBBBBBBBBBBBBB....#",
   "#..............................#",
   "#..............................#",
   "#..............................#",
@@ -394,6 +395,11 @@ function updateGameover(dt) {
 function render() {
   ctx.clearRect(0, 0, PF_W, PF_H);
 
+  if (state === GameState.TITLE) {
+    renderTitle();
+    return;
+  }
+
   // Render map - base (floor) + obj (walls)
   currentMap.render(ctx, camera, ['base', 'obj']);
 
@@ -422,84 +428,74 @@ function render() {
   renderDebug();
 }
 
-function renderHUD() {
-  // Hearts
-  for (let i = 0; i < player.heartContainers; i++) {
-    const heart = player.health > i ? SPR.ui.heartFull : SPR.ui.heartEmpty;
-    ctx.drawImage(heart, 4 + i * 18, 4);
+function renderTitle() {
+  const time = performance.now();
+  const blink = Math.floor(time / 500) % 2 === 0;
+
+  // Dark background
+  const grad = ctx.createLinearGradient(0, 0, 0, PF_H);
+  grad.addColorStop(0, '#0a0a1a');
+  grad.addColorStop(0.5, '#1a1a2e');
+  grad.addColorStop(1, '#0a1a1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, PF_W, PF_H);
+
+  // Stars
+  const starSeed = 12345;
+  let starRng = starSeed;
+  const starCount = 80;
+  for (let i = 0; i < starCount; i++) {
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const x = (starRng % PF_W);
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const y = (starRng % (PF_H * 0.6));
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const size = 1 + (starRng % 2);
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const alpha = 0.3 + (starRng % 1000) / 2000;
+
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillRect(x, y, size, size);
   }
-  // Rupees
-  ctx.drawImage(SPR.ui.rupee, 4, 22);
-  ctx.fillStyle = '#fff';
-  ctx.font = '12px monospace';
-  ctx.fillText(player.rupees.toString().padStart(3, '0'), 22, 32);
-}
 
-function showDialog(text) {
-  dialogPages = text.split('\n').filter(p => p.trim().length > 0);
-  dialogPage = 0;
-  state = GameState.DIALOG;
-}
-
-function renderDialog() {
-  ctx.fillStyle = 'rgba(0,0,0,0.85)';
-  ctx.fillRect(8, PF_H - 64, PF_W - 16, 56);
-  ctx.strokeStyle = '#9fb4d8';
-  ctx.strokeRect(8, PF_H - 64, PF_W - 16, 56);
-
-  ctx.fillStyle = '#fff';
-  ctx.font = '11px monospace';
-  const lines = wrapText(dialogPages[dialogPage], PF_W - 32);
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], 16, PF_H - 52 + i * 14);
-  }
-  // Continue indicator
-  ctx.fillStyle = '#9fb4d8';
-  ctx.fillText('▼ PRESS A/B', PF_W - 80, PF_H - 12);
-}
-
-function wrapText(text, maxWidth) {
-  const words = text.split(' ');
-  const lines = [];
-  let current = '';
-  for (const w of words) {
-    const test = current + (current ? ' ' : '') + w;
-    if (ctx.measureText(test).width > maxWidth) {
-      lines.push(current);
-      current = w;
-    } else {
-      current = test;
+  // Prairie silhouette (hills)
+  const hillColors = ['#1a1a2e', '#162030', '#121a24'];
+  for (let layer = 0; layer < 3; layer++) {
+    ctx.fillStyle = hillColors[layer];
+    ctx.beginPath();
+    ctx.moveTo(0, PF_H * 0.65 + layer * 15);
+    for (let x = 0; x <= PF_W; x += 20) {
+      const seed = x + layer * 100;
+      const h = Math.sin((seed + performance.now() * 0.0001) * 0.05) * 8 + Math.cos((seed * 2) * 0.03) * 4;
+      ctx.lineTo(x, PF_H * 0.65 + layer * 15 - h);
     }
+    ctx.lineTo(PF_W, PF_H);
+    ctx.lineTo(0, PF_H);
+    ctx.fill();
   }
-  if (current) lines.push(current);
-  return lines;
-}
 
-function toast(msg) { toastMsg = msg; toastTimer = 2; }
-
-function renderToast() {
-  ctx.fillStyle = 'rgba(0,0,0,0.8)';
-  ctx.fillRect(PF_W / 2 - 60, 40, 120, 20);
-  ctx.fillStyle = '#fff';
-  ctx.font = '11px monospace';
+  // Title text
+  ctx.fillStyle = '#e8d8a8';
+  ctx.font = 'bold 36px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(toastMsg, PF_W / 2, 54);
-  ctx.textAlign = 'left';
+  ctx.fillText('LARAMIE', PF_W / 2, PF_H * 0.35);
+
+  ctx.fillStyle = '#c8b888';
+  ctx.font = '18px monospace';
+  ctx.fillText('PLAINS OF THE LOST', PF_W / 2, PF_H * 0.42);
+
+  // Blinking PRESS START
+  if (Math.floor(performance.now() / 600) % 2 === 0) {
+    ctx.fillStyle = '#a89878';
+    ctx.font = '14px monospace';
+    ctx.fillText('PRESS START', PF_W / 2, PF_H * 0.6);
+  }
+
+  // Bottom decoration
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(0, PF_H - 20, PF_W, 20);
+  ctx.fillStyle = '#5a4a3a';
+  ctx.fillRect(0, PF_H - 20, PF_W, 2);
 }
 
-function renderDebug() {
-  if (!SHOW_DEBUG_LOG) return;
-  if (!DEBUG_LOG.length) return;
-  const overlay = document.getElementById('debug-overlay') || createDebugOverlay();
-  overlay.textContent = DEBUG_LOG.slice(-12).join('\n');
-}
-
-function createDebugOverlay() {
-  const div = document.createElement('div');
-  div.id = 'debug-overlay';
-  document.body.appendChild(div);
-  return div;
-}
-
-// ---- Boot ----
-init();
+// ---- Render ----\nfunction render() {\n  ctx.clearRect(0, 0, PF_W, PF_H);\n\n  if (state === GameState.TITLE) {\n    renderTitle();\n    return;\n  }\n\n  // Render map - base (floor) + obj (walls)\n  currentMap.render(ctx, camera, ['base', 'obj']);
