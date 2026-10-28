@@ -498,4 +498,40 @@ function renderTitle() {
   ctx.fillRect(0, PF_H - 20, PF_W, 2);
 }
 
-// ---- Render ----\nfunction render() {\n  ctx.clearRect(0, 0, PF_W, PF_H);\n\n  if (state === GameState.TITLE) {\n    renderTitle();\n    return;\n  }\n\n  // Render map - base (floor) + obj (walls)\n  currentMap.render(ctx, camera, ['base', 'obj']);
+
+// ---- Render ----
+function render() {
+  ctx.clearRect(0, 0, PF_W, PF_H);
+
+  if (state === GameState.TITLE) {
+    renderTitle();
+    return;
+  }
+
+  // Render map - base (floor) + obj (walls)
+  currentMap.render(ctx, camera, ['base', 'obj']);
+
+  // Render player
+  player.draw(ctx, camera);
+
+  // Restore context for UI
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // HUD
+  renderHUD();
+
+  // Dialog
+  if (state === GameState.DIALOG) renderDialog();
+
+  // Toast
+  if (toastTimer > 0) renderToast();
+
+  // Fade
+  if (fadeAlpha > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${fadeAlpha})`;
+    ctx.fillRect(0, 0, PF_W, PF_H);
+  }
+
+  // Debug overlay
+  renderDebug();
+}
