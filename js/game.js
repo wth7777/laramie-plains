@@ -535,3 +535,6 @@ function render() {
   // Debug overlay
   renderDebug();
 }
+
+// Start the game
+init();
