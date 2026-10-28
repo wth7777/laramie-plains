@@ -34,6 +34,9 @@ let dialogText = '', dialogPage = 0, dialogPages = [];
 let toastMsg = '', toastTimer = 0;
 
 // Debug
+const SHOW_DIAG = false;       // set true only when debugging input
+const SHOW_DEBUG_LOG = false;
+
 const DEBUG_LOG = [];
 const DIAG = {
   jsInitialized: false,
@@ -66,10 +69,11 @@ function updateDiag(key, value) {
   if (DIAG.hasOwnProperty(key)) {
     DIAG[key] = value;
   }
-  renderDiagPanel();
+  if (SHOW_DIAG) renderDiagPanel();
 }
 
 function renderDiagPanel() {
+  if (!SHOW_DIAG) return;
   let panel = document.getElementById('diag-panel');
   if (!panel) {
     panel = document.createElement('div');
@@ -484,6 +488,7 @@ function renderToast() {
 }
 
 function renderDebug() {
+  if (!SHOW_DEBUG_LOG) return;
   if (!DEBUG_LOG.length) return;
   const overlay = document.getElementById('debug-overlay') || createDebugOverlay();
   overlay.textContent = DEBUG_LOG.slice(-12).join('\n');

@@ -34,18 +34,15 @@ html, body {
 
 canvas#game {
   flex: 0 1 auto;
-  width: auto;
+  width: min(100%, calc((100dvh - 200px) * 512 / 448));
   height: auto;
   max-width: 100%;
-  max-height: calc(100vh - 180px);
+  max-height: calc(100dvh - 200px);
   aspect-ratio: 512 / 448;
   object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
-  border-radius: 2px;
-  box-shadow: 0 0 0 4px #1d2433, 0 0 60px rgba(80,140,255,.12), 0 24px 60px rgba(0,0,0,.6);
-  touch-action: none;
   display: block;
 }
 
