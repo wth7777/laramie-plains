@@ -213,3 +213,6 @@ export class ScreenMap {
 
 // PF_W/PF_H re-export
 export const PF_W = 512, PF_H = 448;
+
+// Re-export TILE from Hitbox for consumers (game.js uses it for mapW/mapH calculations)
+export { TILE } from './Hitbox.js';

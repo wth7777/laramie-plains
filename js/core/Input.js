@@ -193,26 +193,28 @@ export const Input = {
         e.preventDefault();
         this.pressed[key] = true;
         this.keys[key] = true;
-        this.touch.actionBtns[e.pointerId || 0] = action;
+        this.touch.actionBtns[action] = true;
         el.classList.add('pressed');
       };
       const release = (e) => {
         if (e.type.startsWith('pointer') && e.pointerType === 'mouse' && e.button !== 0) return;
         this.keys[key] = false;
-        delete this.touch.actionBtns[e.pointerId || 0];
+        delete this.touch.actionBtns[action];
         el.classList.remove('pressed');
       };
 
-      // Pointer events
+      // Pointer events (primary)
       el.addEventListener('pointerdown', press, { passive: false });
       el.addEventListener('pointerup', release, { passive: false });
       el.addEventListener('pointercancel', release, { passive: false });
       el.addEventListener('pointerleave', release, { passive: false });
 
-      // Touch fallback
-      el.addEventListener('touchstart', press, { passive: false });
-      el.addEventListener('touchend', release, { passive: false });
-      el.addEventListener('touchcancel', release, { passive: false });
+      // Touch fallback ONLY if no PointerEvent support
+      if (!window.PointerEvent) {
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchend', release, { passive: false });
+        el.addEventListener('touchcancel', release, { passive: false });
+      }
 
       // Mouse fallback (for desktop testing)
       el.addEventListener('mousedown', press);
