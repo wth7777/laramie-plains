@@ -29,7 +29,7 @@ let camera, player, currentMap;
 let currentScreen = { map: 'overworld', sx: 2, sy: 2 };
 let lastTime = 0;
 let loopFrame = 0;
-let fadeAlpha = 1, fadeDir = -1, fadeCb = null;
+let fadeAlpha = 0, fadeDir = 0, fadeCb = null;
 let dialogText = '', dialogPage = 0, dialogPages = [];
 let toastMsg = '', toastTimer = 0;
 
