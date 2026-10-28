@@ -367,7 +367,8 @@ function updateFade(dt) {
 
 function updateDialog(dt) {
   updateDiag('gameState', 'dialog');
-  if (Input.attack || Input.item) {
+  // Edge-triggered: only advance on the frame the button is first pressed
+  if (Input.pressed['KeyZ'] || Input.pressed['Space'] || Input.pressed['KeyX'] || Input.pressed['Enter']) {
     dialogPage++;
     if (dialogPage >= dialogPages.length) {
       state = GameState.PLAY;
@@ -431,7 +432,7 @@ function renderHUD() {
 }
 
 function showDialog(text) {
-  dialogPages = text.split('\n');
+  dialogPages = text.split('\n').filter(p => p.trim().length > 0);
   dialogPage = 0;
   state = GameState.DIALOG;
 }
