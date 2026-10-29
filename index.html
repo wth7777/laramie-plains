@@ -1,38 +1,548 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>LARAMIE: PLAINS OF THE LOST</title>
-<link rel="stylesheet" href="css/main.css">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b0d12">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Laramie Plains">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>LARAMIE: PLAINS OF THE LOST</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Laramie Plains">
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game" width="512" height="448"></canvas>
-  <div id="hint">PRESS <b>START</b> TO BEGIN</div>
-  <div id="touch-controls" class="visible">
-    <div class="controls-inner">
-      <div class="joy-base" id="joy-base">
-        <div class="joy-stick" id="joy-stick"></div>
-      </div>
-      <div class="btn-cluster">
-        <div class="btn-row">
-          <button type="button" class="btn-a" id="btn-a" aria-label="Item">A</button>
+  <div id="wrap">
+    <canvas id="game" width="512" height="448"></canvas>
+    <div id="hint">PRESS <b>START</b> TO BEGIN</div>
+    <div id="touch-controls" class="visible">
+      <div class="controls-inner">
+        <div class="joy-base" id="joy-base">
+          <div class="joy-stick" id="joy-stick"></div>
         </div>
-        <div class="btn-row">
-          <button type="button" class="btn-b" id="btn-b" aria-label="Attack">B</button>
-          <button type="button" class="btn-sys btn-start" id="btn-start" aria-label="Menu">START</button>
-          <button type="button" class="btn-sys btn-select" id="btn-select" aria-label="Map">SELECT</button>
+        <div class="btn-cluster">
+          <div class="btn-row">
+            <button type="button" class="btn-a" id="btn-a" aria-label="Item">A</button>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn-b" id="btn-b" aria-label="Attack">B</button>
+            <button type="button" class="btn-sys btn-start" id="btn-start" aria-label="Menu">START</button>
+            <button type="button" class="btn-sys btn-select" id="btn-select" aria-label="Map">SELECT</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
-<script src="js/test-log.js"></script>
+  <script type="module">
+// LARAMIE: PLAINS OF THE LOST — main.js
+// Entry point, game loop, state management
+import { StateMachine } from './core/StateMachine.js';
+import { Input } from './core/Input.js';
+import { TileMap, Camera } from './core/TileMap.js';
+import { SPR } from './core/Sprites.js';
+
+const STATE = {
+  TITLE: 'title',
+  DIALOG: 'dialog',
+  PLAY: 'play',
+  PAUSE: 'pause',
+};
+
+let stateMachine;
+let canvasCtx;
+let tileMap;
+let camera;
+let player;
+
+// Dialog state
+let dialogPage = 0;
+let dialogPages = [];
+
+// Solid tiles (walls, obstacles) – using CHAR_TILE numbers from Sprites.js tile mapping
+const SOLID_TILES = new Set([
+  7,   // rock
+  8,   // bush
+  12,  // fence
+  13,  // hwall
+  14,  // hdoor
+  15,  // cave
+  16,  // stump
+  17,  // roof
+  18,  // sign
+  19,  // waterfall
+  20,  // pond
+  21,  // grave
+  22,  // dwall
+  23,  // dfloor
+  24,  // door_lock
+  25,  // door_boss
+  26,  // door_shut
+  27,  // stairs
+  28,  // dcrack
+  29,  // torch
+  30,  // statue
+  // 31: door_open (left out – passable when opened)
+  32,  // wfloor
+  33,  // wwall
+  34,  // rug
+  35,  // counter
+  36,  // grave (duplicate)
+  37,  // pond (dup)
+  38,  // roof (dup)
+  39,  // sign (dup)
+  40,  // waterfall (dup)
+  41,  // rail
+  42,  // telegraph
+  43,  // campfire
+  44,  // claim_marker
+]);
+
+// Player simple object
+class Player {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = 80; // px/sec
+    this.dir = 'down'; // down, up, left, right
+    this.frame = 0;
+    this.frameTime = 0;
+    this.spriteIdle = SPR.fox.idle_down[0]; // placeholder
+    this.spriteWalk = SPR.fox.walk_down; // array
+  }
+  update(dt, tileMap) {
+    const dx = (Input.left ? -1 : 0) + (Input.right ? 1 : 0);
+    const dy = (Input.up ? -1 : 0) + (Input.down ? 1 : 0);
+    let moveX = 0, moveY = 0;
+    if (dx !== 0 || dy !== 0) {
+      // Normalize diagonal
+      if (dx !== 0 && dy !== 0) {
+        const len = Math.sqrt(2);
+        dx /= len; dy /= len;
+      }
+      moveX = dx * this.speed * dt;
+      moveY = dy * this.speed * dt;
+      // Update direction
+      if (dx < 0) this.dir = 'left';
+      else if (dx > 0) this.dir = 'right';
+      else if (dy < 0) this.dir = 'up';
+      else if (dy > 0) this.dir = 'down';
+      // Animation
+      this.frameTime += dt;
+      if (this.frameTime > 0.1) {
+        this.frameTime = 0;
+        this.frame = (this.frame + 1) % 4;
+      }
+    }
+    // Simple collision: check intended new position against solid tiles
+    const newX = this.x + moveX;
+    const newY = this.y + moveY;
+    const tileSize = 16;
+    const rx = Math.floor(newX / tileSize);
+    const ry = Math.floor(newY / tileSize);
+    // Check four corners of player's hitbox (size 16x16)
+    const points = [
+      { x: newX, y: newY },
+      { x: newX + 15, y: newY },
+      { x: newX, y: newY + 15 },
+      { x: newX + 15, y: newY + 15 },
+    ];
+    let canMove = true;
+    for (const p of points) {
+      const tx = Math.floor(p.x / tileSize);
+      const ty = Math.floor(p.y / tileSize);
+      if (tileMap.isSolid(tx, ty, SOLID_TILES)) {
+        canMove = false;
+        break;
+      }
+    }
+    if (canMove) {
+      this.x = newX;
+      this.y = newY;
+    }
+  }
+  draw(ctx, camera) {
+    const { x: camX, y: camY } = camera.getRenderOffset();
+    const spriteName = `walk_${this.dir}`;
+    const spriteArray = SPR.fox[spriteName];
+    const sprite = spriteArray ? spriteArray[this.frame] : SPR.fox[`idle_${this.dir}`][0];
+    ctx.drawImage(sprite, this.x - camX, this.y - camY, 16, 16);
+  }
+}
+
+// Game state variables
+let attackCooldown = 0;
+let playerHealth = 3;
+let maxHealth = 3;
+let rupees = 0;
+
+// Helper to show dialog
+function showDialog(pages) {
+  dialogPages = pages;
+  dialogPage = 0;
+  stateMachine.change(STATE.DIALOG);
+}
+
+// Initialize
+async function init() {
+  const canvasEl = document.getElementById('game');
+  const ctx = canvasEl.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  canvasCtx = ctx;
+
+  Input.init();
+
+  // Create map: 32x32 tiles
+  const mapWidth = 32, mapHeight = 32;
+  const grass = 1; // grass tile ID
+  const wall = 22; // dwall (solid wall)
+  const data = Array.from({ length: mapHeight }, (y) => 
+    Array.from({ length: mapWidth }, (x) => {
+      // Border walls
+      if (x === 0 || y === 0 || x === mapWidth - 1 || y === mapHeight - 1) return wall;
+      // Building rectangle from (8,8) to (20,14)
+      if (x >= 8 && x <= 20 && y >= 8 && y <= 14) {
+        // Outer walls
+        if (x === 8 || x === 20 || y === 8 || y === 14) return wall;
+        // Inner floor
+        return grass;
+      }
+      // Open grass elsewhere
+      return grass;
+    })
+  );
+
+  // Add a door in the south wall of the building (middle)
+  const doorX = 12; // between 8 and 20
+  const doorY = 14; // south wall
+  data[doorY][doorX] = 14; // hdoor (closed door)
+
+  // Add a sign north of the building (outside)
+  const signX = 12;
+  const signY = 6; // just north of building entrance
+  data[signY][signX] = 18; // sign
+
+  // Add a bush west of the building for combat testing
+  const bushX = 6;
+  const bushY = 10;
+  data[bushY][bushX] = 8; // bush
+
+  tileMap = new TileMap(data);
+  const worldPixelWidth = mapWidth * 16;
+  const worldPixelHeight = mapHeight * 16;
+  camera = new Camera(worldPixelWidth, worldPixelHeight, 512, 448);
+  // Start player in open area north of building
+  player = new Player(8 * 16, 6 * 16); // tile (8,6) pixel coords
+
+  // Initial dialog (intro)
+  showDialog([
+    "LARAMIE, 1868. THE UNION PACIFIC REACHES THESE PLAINS.",
+    "YOU ARRIVE AS A SURVEYOR'S APPRENTICE...",
+    "BUT THE LAND REMEMBERS JACQUES LA RAMEE.",
+    "FIND THE TRAPPER AT VEDAUWOO."
+  ]);
+
+  // Hide hint
+  const hint = document.getElementById('hint');
+  if (hint) hint.style.display = 'none';
+
+  // Attack cooldown
+  attackCooldown = 0;
+
+  stateMachine = new StateMachine({
+    [STATE.TITLE]: {
+      enter: () => { /* nothing */ },
+      update: (dt) => {
+        if (Input.pressed.start || Input.pressed.a || Input.pressed.b) {
+          stateMachine.change(STATE.DIALOG);
+          dialogPage = 0;
+        }
+      },
+    },
+    [STATE.DIALOG]: {
+      enter: () => { /* reset */ },
+      update: (dt) => {
+        if (Input.pressed.a || Input.pressed.b) {
+          dialogPage++;
+          if (dialogPage >= dialogPages.length) {
+            stateMachine.change(STATE.PLAY);
+          }
+        }
+      },
+    },
+    [STATE.PLAY]: {
+      enter: () => { },
+      update: (dt) => {
+        player.update(dt, tileMap);
+        camera.follow(player.x + 8, player.y + 8); // center on player
+
+        // Interaction: press A to talk/open door
+        if (Input.pressed.a) {
+          // Determine tile in front of player
+          const tileSize = 16;
+          const px = Math.floor(player.x / tileSize);
+          const py = Math.floor(player.y / tileSize);
+          let tx = px, ty = py;
+          switch (player.dir) {
+            case 'up':   ty--; break;
+            case 'down': ty++; break;
+            case 'left': tx--; break;
+            case 'right':tx++; break;
+          }
+          const tileID = tileMap.getTile(tx, ty);
+          if (tileID === 14) { // closed door -> open
+            tileMap.setTile(tx, ty, 1); // change to grass (passable)
+            // Optionally play a door open sound
+          } else if (tileID === 18) { // sign
+            showDialog([
+              "Welcome to Laramie, 1868.",
+              "Surveyor's camp lies ahead.",
+              "The trapper waits at Vedauwoo."
+            ]);
+          }
+          // Add more interactable tiles as needed
+        }
+
+        // Combat: press B to attack (cut bush)
+        if (Input.pressed.b && attackCooldown <= 0) {
+          // Determine tile in front of player
+          const tileSize = 16;
+          const px = Math.floor(player.x / tileSize);
+          const py = Math.floor(player.y / tileSize);
+          let tx = px, ty = py;
+          switch (player.dir) {
+            case 'up':   ty--; break;
+            case 'down': ty++; break;
+            case 'left': tx--; break;
+            case 'right':tx++; break;
+          }
+          const tileID = tileMap.getTile(tx, ty);
+          if (tileID === 8) { // bush -> cut
+            tileMap.setTile(tx, ty, 1); // change to grass
+            // Optionally play a swing sound
+          }
+          // Set cooldown
+          attackCooldown = 0.5; // seconds
+        }
+
+        // Decrease cooldown
+        if (attackCooldown > 0) {
+          attackCooldown -= dt;
+          if (attackCooldown < 0) attackCooldown = 0;
+        }
+
+        if (Input.pressed.start) stateMachine.change(STATE.PAUSE);
+      },
+    },
+    [STATE.PAUSE]: {
+      enter: () => { },
+      update: (dt) => {
+        if (Input.pressed.start) stateMachine.change(STATE.PLAY);
+      },
+    }
+  });
+
+  stateMachine.change(STATE.TITLE);
+
+  requestAnimationFrame(loop);
+}
+
+let lastTime = 0;
+function loop(time) {
+  const dt = (time - lastTime) / 1000;
+  lastTime = time;
+
+  Input.update();
+  stateMachine.update(dt);
+  render();
+
+  requestAnimationFrame(loop);
+}
+
+function render() {
+  const ctx = canvasCtx;
+  ctx.clearRect(0, 0, 512, 448);
+
+  // Determine current state for rendering
+  const stateNames = Object.keys(STATE);
+  let currentState = STATE.TITLE;
+  for (const key of stateNames) {
+    if (stateMachine.current === STATE[key]) {
+      currentState = STATE[key];
+      break;
+    }
+  }
+
+  // Always draw map and player except in title (where we draw custom title)
+  if (currentState !== STATE.TITLE) {
+    // Draw map
+    tileMap.render(ctx, camera, SOLID_TILES);
+    // Draw player
+    player.draw(ctx, camera);
+  }
+
+  // Draw HUD (always visible except title)
+  if (currentState !== STATE.TITLE) {
+    renderHUD(ctx);
+  }
+
+  // Draw dialog overlay
+  if (currentState === STATE.DIALOG) {
+    renderDialog(ctx);
+  }
+
+  // Draw pause overlay
+  if (currentState === STATE.PAUSE) {
+    renderPause(ctx);
+  }
+
+  // Title screen rendering
+  if (currentState === STATE.TITLE) {
+    renderTitle(ctx);
+  }
+
+  // Debug: show FPS
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px monospace';
+  ctx.fillText(`FPS: ${Math.round(1 / (time - lastTime))}`, 10, 20);
+}
+
+// HUD rendering
+function renderHUD(ctx) {
+  const heartFull = SPR.ui.heartFull;
+  const heartEmpty = SPR.ui.heartEmpty;
+  const rupeeImg = SPR.ui.rupee;
+  const iconSize = 16;
+  const padding = 4;
+  let x = padding;
+  let y = padding;
+
+  // Hearts
+  for (let i = 0; i < maxHealth; i++) {
+    const heart = i < playerHeart ? heartFull : heartEmpty;
+    ctx.drawImage(heart, x, y, iconSize, iconSize);
+    x += iconSize + 2;
+  }
+  x += padding; // gap
+
+  // Rupees
+  ctx.drawImage(rupeeImg, x, y, iconSize, iconSize);
+  x += iconSize + 2;
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px monospace';
+  ctx.fillText(`${rupees}`, x, y + iconSize - 2);
+}
+
+// Dialog rendering
+function renderDialog(ctx) {
+  const dialogBoxPadding = 16;
+  const dialogBoxWidth = 512 - dialogBoxPadding * 2;
+  const dialogBoxHeight = 80;
+  const dialogBoxX = dialogBoxPadding;
+  const dialogBoxY = 448 - dialogBoxHeight - dialogBoxPadding;
+
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(dialogBoxX, dialogBoxY, dialogBoxWidth, dialogBoxHeight);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dialogBoxX, dialogBoxY, dialogBoxWidth, dialogBoxHeight);
+
+  // Text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'left';
+  const lines = dialogPages[dialogPage] ? dialogPages[dialogPage].split('\\n') : [''];
+  let lineY = dialogBoxY + 24;
+  for (const line of lines) {
+    ctx.fillText(line, dialogBoxX + 24, lineY);
+    lineY += 20;
+  }
+}
+
+// Pause rendering
+function renderPause(ctx) {
+  // Semi-transparent overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, 512, 448);
+  // Pause text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 32px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('PAUSED', 256, 200);
+  ctx.font = '16px monospace';
+  ctx.fillText('Press START to resume', 256, 240);
+}
+
+// Title screen rendering
+function renderTitle(ctx) {
+  const time = performance.now();
+  const blink = Math.floor(time / 500) % 2 === 0;
+
+  // Dark background
+  const grad = ctx.createLinearGradient(0, 0, 0, 448);
+  grad.addColorStop(0, '#0a0a1a');
+  grad.addColorStop(0.5, '#1a1a2e');
+  grad.addColorStop(1, '#0a1a1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 448);
+
+  // Stars
+  const starSeed = 12345;
+  let starRng = starSeed;
+  const starCount = 80;
+  for (let i = 0; i < starCount; i++) {
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const x = (starRng % 512);
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const y = (starRng % (448 * 0.6));
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const size = 1 + (starRng % 2);
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const alpha = 0.3 + (starRng % 1000) / 2000;
+
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillRect(x, y, size, size);
+  }
+
+  // Prairie silhouette (hills)
+  const hillColors = ['#1a1a2e', '#162030', '#121a24'];
+  for (let layer = 0; layer < 3; layer++) {
+    ctx.fillStyle = hillColors[layer];
+    ctx.beginPath();
+    ctx.moveTo(0, 448 * 0.65 + layer * 15);
+    for (let x = 0; x <= 512; x += 20) {
+      const seed = x + layer * 100;
+      const h = Math.sin((seed + performance.now() * 0.0001) * 0.05) * 8 + Math.cos((seed * 2) * 0.03) * 4;
+      ctx.lineTo(x, 448 * 0.65 + layer * 15 - h);
+    }
+    ctx.lineTo(512, 448);
+    ctx.lineTo(0, 448);
+    ctx.fill();
+  }
+
+  // Title text
+  ctx.fillStyle = '#e8d8a8';
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('LARAMIE', 256, 160);
+
+  ctx.fillStyle = '#c8b888';
+  ctx.font = '18px monospace';
+  ctx.fillText('PLAINS OF THE LOST', 256, 200);
+
+  // Blinking PRESS START
+  if (blink) {
+    ctx.fillStyle = '#a89878';
+    ctx.font = '14px monospace';
+    ctx.fillText('PRESS START', 256, 260);
+  }
+
+  // Bottom decoration
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(0, 428, 512, 20);
+  ctx.fillStyle = '#5a4a3a';
+  ctx.fillRect(0, 428, 512, 2);
+}
+</script>
 </body>
 </html>
