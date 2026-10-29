@@ -133,6 +133,12 @@ class Player {
   }
 }
 
+// Game state variables
+let attackCooldown = 0;
+let playerHealth = 3;
+let maxHealth = 3;
+let rupees = 0;
+
 // Helper to show dialog
 function showDialog(pages) {
   dialogPages = pages;
@@ -204,7 +210,7 @@ async function init() {
   if (hint) hint.style.display = 'none';
 
   // Attack cooldown
-  let attackCooldown = 0;
+  attackCooldown = 0;
 
   stateMachine = new StateMachine({
     [STATE.TITLE]: {
@@ -320,12 +326,186 @@ function render() {
   const ctx = canvasCtx;
   ctx.clearRect(0, 0, 512, 448);
 
-  stateMachine.render(ctx);
+  // Determine current state for rendering
+  const stateNames = Object.keys(STATE);
+  let currentState = STATE.TITLE;
+  for (const key of stateNames) {
+    if (stateMachine.current === STATE[key]) {
+      currentState = STATE[key];
+      break;
+    }
+  }
+
+  // Always draw map and player except in title (where we draw custom title)
+  if (currentState !== STATE.TITLE) {
+    // Draw map
+    tileMap.render(ctx, camera, SOLID_TILES);
+    // Draw player
+    player.draw(ctx, camera);
+  }
+
+  // Draw HUD (always visible except title)
+  if (currentState !== STATE.TITLE) {
+    renderHUD(ctx);
+  }
+
+  // Draw dialog overlay
+  if (currentState === STATE.DIALOG) {
+    renderDialog(ctx);
+  }
+
+  // Draw pause overlay
+  if (currentState === STATE.PAUSE) {
+    renderPause(ctx);
+  }
+
+  // Title screen rendering
+  if (currentState === STATE.TITLE) {
+    renderTitle(ctx);
+  }
 
   // Debug: show FPS
   ctx.fillStyle = '#fff';
   ctx.font = '12px monospace';
   ctx.fillText(`FPS: ${Math.round(1 / (time - lastTime))}`, 10, 20);
+}
+
+// HUD rendering
+function renderHUD(ctx) {
+  const heartFull = SPR.ui.heartFull;
+  const heartEmpty = SPR.ui.heartEmpty;
+  const rupeeImg = SPR.ui.rupee;
+  const iconSize = 16;
+  const padding = 4;
+  let x = padding;
+  let y = padding;
+
+  // Hearts
+  for (let i = 0; i < maxHealth; i++) {
+    const heart = i < playerHealth ? heartFull : heartEmpty;
+    ctx.drawImage(heart, x, y, iconSize, iconSize);
+    x += iconSize + 2;
+  }
+  x += padding; // gap
+
+  // Rupees
+  ctx.drawImage(rupeeImg, x, y, iconSize, iconSize);
+  x += iconSize + 2;
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px monospace';
+  ctx.fillText(`${rupees}`, x, y + iconSize - 2);
+}
+
+// Dialog rendering
+function renderDialog(ctx) {
+  const dialogBoxPadding = 16;
+  const dialogBoxWidth = 512 - dialogBoxPadding * 2;
+  const dialogBoxHeight = 80;
+  const dialogBoxX = dialogBoxPadding;
+  const dialogBoxY = 448 - dialogBoxHeight - dialogBoxPadding;
+
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(dialogBoxX, dialogBoxY, dialogBoxWidth, dialogBoxHeight);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dialogBoxX, dialogBoxY, dialogBoxWidth, dialogBoxHeight);
+
+  // Text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'left';
+  const lines = dialogPages[dialogPage] ? dialogPages[dialogPage].split('\n') : [''];
+  let lineY = dialogBoxY + 24;
+  for (const line of lines) {
+    ctx.fillText(line, dialogBoxX + 24, lineY);
+    lineY += 20;
+  }
+}
+
+// Pause rendering
+function renderPause(ctx) {
+  // Semi-transparent overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, 512, 448);
+  // Pause text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 32px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('PAUSED', 256, 200);
+  ctx.font = '16px monospace';
+  ctx.fillText('Press START to resume', 256, 240);
+}
+
+// Title screen rendering
+function renderTitle(ctx) {
+  const time = performance.now();
+  const blink = Math.floor(time / 500) % 2 === 0;
+
+  // Dark background
+  const grad = ctx.createLinearGradient(0, 0, 0, 448);
+  grad.addColorStop(0, '#0a0a1a');
+  grad.addColorStop(0.5, '#1a1a2e');
+  grad.addColorStop(1, '#0a1a1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 448);
+
+  // Stars
+  const starSeed = 12345;
+  let starRng = starSeed;
+  const starCount = 80;
+  for (let i = 0; i < starCount; i++) {
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const x = (starRng % 512);
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const y = (starRng % (448 * 0.6));
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const size = 1 + (starRng % 2);
+    starRng = (starRng * 1664525 + 1013904223) % 4294967296;
+    const alpha = 0.3 + (starRng % 1000) / 2000;
+
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillRect(x, y, size, size);
+  }
+
+  // Prairie silhouette (hills)
+  const hillColors = ['#1a1a2e', '#162030', '#121a24'];
+  for (let layer = 0; layer < 3; layer++) {
+    ctx.fillStyle = hillColors[layer];
+    ctx.beginPath();
+    ctx.moveTo(0, 448 * 0.65 + layer * 15);
+    for (let x = 0; x <= 512; x += 20) {
+      const seed = x + layer * 100;
+      const h = Math.sin((seed + performance.now() * 0.0001) * 0.05) * 8 + Math.cos((seed * 2) * 0.03) * 4;
+      ctx.lineTo(x, 448 * 0.65 + layer * 15 - h);
+    }
+    ctx.lineTo(512, 448);
+    ctx.lineTo(0, 448);
+    ctx.fill();
+  }
+
+  // Title text
+  ctx.fillStyle = '#e8d8a8';
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('LARAMIE', 256, 160);
+
+  ctx.fillStyle = '#c8b888';
+  ctx.font = '18px monospace';
+  ctx.fillText('PLAINS OF THE LOST', 256, 200);
+
+  // Blinking PRESS START
+  if (blink) {
+    ctx.fillStyle = '#a89878';
+    ctx.font = '14px monospace';
+    ctx.fillText('PRESS START', 256, 260);
+  }
+
+  // Bottom decoration
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(0, 428, 512, 20);
+  ctx.fillStyle = '#5a4a3a';
+  ctx.fillRect(0, 428, 512, 2);
 }
 
 // Start
