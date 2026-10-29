@@ -19,6 +19,10 @@ Open `index.html` in a modern browser, or serve this folder with any static web 
 - Sound is generated in the browser with Web Audio. Tap SOUND once to enable audio on mobile if needed.
 - Progress autosaves in browser local storage.
 
+## Latest mobile and story improvements
+- Compact phone layout gives the playfield more of the available screen and reduces surrounding padding. Touch controls and HUD are smaller on short screens; help text and footer are hidden during mobile play.
+- Story progression centers on the missing surveyor, the singing rail line, ancient star markings, and the sealed Star-Well. NPC dialogue and the journal/map support exploration.
+
 ## Design notes
 - The game uses original code-drawn pixel-art scenery, frontier props, a surveyor sprite, and procedural ambient effects.
 - Trail openings are visibly marked in gold and labeled at the screen edge. The walkable corridors are aligned to those openings.
