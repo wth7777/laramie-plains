@@ -1,38 +1,25 @@
-# Laramie Plains: Echoes of the Survey
+# Laramie Plains: Echoes Beyond the Well — Kick Butt Build
 
-A polished frontier action-adventure set on the Laramie Plains in 1867.
+A standalone, mobile-friendly 16-bit browser adventure set in a fictionalized 19th-century Wyoming frontier. No build tools or server required.
 
-**One-up version** of the original ChatGPT-made game — with full sound, better procedural pixel graphics, particles, ambient music, and smoother feel.
+## Run locally
+Open `index.html` in a modern browser, or serve this folder with any static web server.
 
-## Features
-
-- Pure canvas pixel art (no external sprite sheets)
-- Web Audio ambient wind + procedural music + rich SFX
-- Multiple zones: Survey Camp → Tent Town → Railhead → Wind-Carved Ridge → La Ramée Canyon
-- Quest chain: collect both survey stakes → investigate the Star-Well → Wind Shrine → brass key → Understar Door
-- Combat, chests, NPCs, journal, inventory
-- Local save (this device)
-- Mobile + desktop controls
-
-## How to run / host
-
-Just open `index.html` in a modern browser, **or** push the folder to GitHub and enable GitHub Pages.
-
-No build step. No dependencies.
+## Deploy to GitHub Pages
+1. Extract the ZIP.
+2. Upload all four files (`index.html`, `style.css`, `game.js`, `README.md`) to the root of your GitHub repository.
+3. Commit changes and let GitHub Pages publish.
+4. Open the same Pages URL on your phone.
 
 ## Controls
+- Touch arrow pad or keyboard arrows / WASD to move.
+- A / Space / Enter interacts.
+- B / X uses the survey hammer after finding it.
+- MAP shows explored destinations; JOURNAL shows quest progress.
+- Sound is generated in the browser with Web Audio. Tap SOUND once to enable audio on mobile if needed.
+- Progress autosaves in browser local storage.
 
-| Action     | Keyboard          | Touch          |
-|------------|-------------------|----------------|
-| Move       | WASD / Arrows     | D-pad          |
-| Interact   | Space / Enter     | INTERACT       |
-| Use Tool   | X                 | USE TOOL       |
-| Journal    | J                 | Field Journal  |
-| Inventory  | I                 | Satchel        |
-
-## Credits
-
-Setting inspired by the real Laramie Plains and the survey era of the Union Pacific.  
-The Star-Well and supernatural elements are pure fiction.
-
-Made as a friendly one-up to the original browser game.
+## Design notes
+- The game uses original code-drawn pixel-art scenery, frontier props, a surveyor sprite, and procedural ambient effects.
+- Trail openings are visibly marked in gold and labeled at the screen edge. The walkable corridors are aligned to those openings.
+- This is a fresh prototype build. Syntax and ZIP integrity can be checked automatically, but it still needs a live playtest on a real phone for balance and collision edge cases.

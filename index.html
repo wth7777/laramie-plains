@@ -1,69 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <title>Laramie Plains: Echoes of the Survey</title>
-  <meta name="description" content="A frontier action-adventure set on the Laramie Plains, 1867. Find the survey stakes. Discover what lies beneath the Star-Well." />
-  <meta name="theme-color" content="#0c1018" />
-  <link rel="manifest" href="manifest.json" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#101923">
+<title>Laramie Plains: Echoes Beyond the Well</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <div>
-      <div class="eyebrow">A Frontier Action-Adventure · 1867</div>
-      <h1>Laramie Plains</h1>
-    </div>
-    <div class="top-actions">
-      <button id="helpBtn" class="small-button">Help</button>
-      <button id="resetBtn" class="small-button">New Game</button>
-    </div>
+<div id="game-shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">✦</span><div><strong>LARAMIE PLAINS</strong><small>Echoes Beyond the Well</small></div></div>
+    <div class="status"><span id="health">♥ ♥ ♥</span><span id="coins">◇ 0</span><button id="soundBtn" aria-label="Toggle sound">♫ SOUND</button></div>
   </header>
-
-  <section class="game-wrap" aria-label="Game world">
-    <canvas id="game" width="640" height="400" aria-label="Game world"></canvas>
-    <div id="toast" class="toast" role="status"></div>
-  </section>
-
-  <section class="hud">
-    <div class="hud-left">
-      <span class="hearts" id="health">♥ ♥ ♥ ♥ ♥</span>
-      <span id="tool">Survey chain · 0 coins</span>
-    </div>
-    <div class="hud-right">
-      <span class="objective" id="objective">Quest: Find both survey stakes</span>
-    </div>
-  </section>
-
-  <section class="mobile-controls" aria-label="Touch controls">
-    <div class="dpad">
-      <button data-dir="up" class="dir up" aria-label="Move up">▲</button>
-      <button data-dir="left" class="dir left" aria-label="Move left">◀</button>
-      <button data-dir="down" class="dir down" aria-label="Move down">▼</button>
-      <button data-dir="right" class="dir right" aria-label="Move right">▶</button>
-    </div>
-    <div class="action-buttons">
-      <button id="interactBtn" class="action">INTERACT</button>
-      <button id="toolBtn" class="action secondary">USE TOOL</button>
-    </div>
-  </section>
-
-  <section class="menu-buttons">
-    <button id="journalBtn">Field Journal</button>
-    <button id="bagBtn">Satchel &amp; Equipment</button>
-  </section>
-
-  <footer>Echoes of the Survey · Saves on this device · Made to one-up ChatGPT</footer>
-
-  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="panel">
-      <button id="closeModal" class="close" aria-label="Close">×</button>
-      <h2 id="modalTitle">Field Journal</h2>
-      <div id="modalBody"></div>
-    </div>
-  </div>
-
+  <main>
+    <section class="game-wrap">
+      <canvas id="game" width="960" height="540" aria-label="Laramie Plains adventure game"></canvas>
+      <div id="toast" class="toast">Welcome, surveyor.</div>
+      <div id="dialog" class="dialog hidden">
+        <div class="dialog-top"><span id="dialog-title">Field Notes</span><button id="dialog-close" aria-label="Close">×</button></div>
+        <p id="dialog-text"></p><button id="dialog-next" class="gold-button">CONTINUE ▸</button>
+      </div>
+      <div id="map-card" class="map-card hidden"><strong>FIELD MAP</strong><div id="map-list"></div><button id="map-close" class="gold-button">BACK TO TRAIL</button></div>
+      <div id="title-screen" class="title-screen">
+        <div class="title-sky"></div><div class="title-content">
+          <div class="eyebrow">A WYOMING FRONTIER MYSTERY</div><h1>LARAMIE<br><em>PLAINS</em></h1><div class="title-sub">ECHOES BEYOND THE WELL</div>
+          <p>Survey the frontier. Follow the old rail line.<br>Discover what is calling from beneath the prairie.</p>
+          <button id="startBtn" class="gold-button start-button">BEGIN YOUR JOURNEY</button>
+          <small>Best experienced with sound on · Autosaves on this device</small>
+        </div>
+      </div>
+    </section>
+    <section class="hud-row">
+      <div class="quest"><span class="quest-icon">✧</span><div><small>YOUR OBJECTIVE</small><strong id="objective">Find the survey stake near camp</strong></div></div>
+      <div class="location"><span>LOCATION</span><strong id="location">Survey Camp</strong></div>
+      <button id="mapBtn" class="hud-button">▦ MAP</button>
+      <button id="journalBtn" class="hud-button">▤ JOURNAL</button>
+    </section>
+    <section class="mobile-controls" aria-label="Touch controls">
+      <div class="dpad">
+        <button data-dir="up" class="up">▲</button><button data-dir="left" class="left">◀</button><button data-dir="down" class="down">▼</button><button data-dir="right" class="right">▶</button>
+      </div>
+      <div class="action-controls"><button id="interactBtn" class="action-button">A <small>INTERACT</small></button><button id="attackBtn" class="action-button attack">B <small>TOOL</small></button></div>
+    </section>
+    <p class="help-line">Move with the arrows or WASD · A / Space to interact · B / X to use your tool · Walk onto the marked trail openings to travel.</p>
+  </main>
+  <footer>AN ORIGINAL FRONTIER ADVENTURE · MADE FOR THE OPEN PRAIRIE</footer>
+</div>
 <script src="game.js"></script>
-</body>
-</html>
+</body></html>
