@@ -1,0 +1,76 @@
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+ctx.imageSmoothingEnabled=false;
+const TILE=32, COLS=20, ROWS=12;
+const maps={
+plains:{name:"Laramie Plains",tiles:[
+"22222222222222222222","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","22222222222222222222"],
+objects:[{x:5,y:3,type:"sign",text:"Survey Camp",id:"camp"},{x:9,y:5,type:"stake",id:"stake1"},{x:14,y:7,type:"stake",id:"stake2"},{x:17,y:3,type:"well",id:"well"},{x:3,y:8,type:"npc",id:"mara"},{x:10,y:2,type:"rock",id:"rock"}],exits:[{x:19,y:5,to:"town",tx:1,ty:5}]},
+town:{name:"Tent Town",tiles:[
+"22222222222222222222","2gggggggggggggggggg2","2gggggggggggggggggg2","2gggwwggggggwwggggg2","2gggwwggggggwwggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","2ggggwwgggggggggggg2","2ggggwwgggggggggggg2","2gggggggggggggggggg2","2gggggggggggggggggg2","22222222222222222222"],
+objects:[{x:4,y:3,type:"building",text:"General Store",id:"store"},{x:12,y:3,type:"building",text:"Survey Office",id:"office"},{x:7,y:8,type:"npc",id:"louisa"},{x:16,y:7,type:"sign",text:"To the railhead",id:"rail"}],exits:[{x:0,y:5,to:"plains",tx:18,ty:5}]},
+well:{name:"The Star-Well",tiles:[
+"22222222222222222222","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","2pppppppppppppppppp2","22222222222222222222"],
+objects:[{x:10,y:5,type:"wellcore",id:"core"},{x:5,y:3,type:"crystal",id:"crystal"},{x:15,y:7,type:"crystal",id:"crystal2"},{x:10,y:2,type:"npc",id:"echo"}],exits:[{x:1,y:5,to:"plains",tx:16,ty:5}]}
+};
+let state={map:"plains",x:2.5,y:5.5,dir:"down",health:3,chain:false,shard:false,stake1:false,stake2:false,wellSeen:false,coreSolved:false,talkedMara:false,talkedLouisa:false,visitedTown:false,visitedWell:false,notes:[],time:0};
+const saved=localStorage.getItem("laramiePlainsSave"); if(saved){try{state={...state,...JSON.parse(saved)}}catch{}}
+const keys={},touch={up:false,down:false,left:false,right:false};let last=0,toastTimer=0;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("laramiePlainsSave",JSON.stringify(state))}
+function toast(s){$("toast").textContent=s;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2600)}
+function objective(){if(!state.stake1||!state.stake2)return"Objective: Find the two survey stakes";if(!state.visitedTown)return"Objective: Ask around Tent Town";if(!state.shard)return"Objective: Investigate the strange well";if(!state.coreSolved)return"Objective: Tune the Star-Well";return"Objective: Map the impossible horizon"}
+function modal(title,html){$("modalTitle").textContent=title;$("modalBody").innerHTML=html;$("modal").classList.remove("hidden")}
+function closeModal(){$("modal").classList.add("hidden")}
+$("closeModal").onclick=closeModal;
+$("journalBtn").onclick=()=>modal("Field Journal",`<p><b>Survey notes, 1867</b></p><ul>${state.notes.map(n=>`<li>${n}</li>`).join("")||"<li>Your notebook is empty. Explore and speak to the locals.</li>"}</ul><p><b>Known leads</b></p><ul><li>Two brass survey stakes are hidden on the plains.</li><li>Town gossip mentions a strange light beyond the railhead.</li><li>The old well seems to answer certain tones.</li></ul><p><small>Progress saves automatically on this device.</small></p>`);
+$("helpBtn").onclick=()=>modal("How to play",`<p>Explore the Laramie Plains, talk to locals, collect survey clues, and solve the mystery of the Star-Well.</p><ul><li><b>Move:</b> use the directional pad or keyboard arrows / WASD.</li><li><b>Interact:</b> press the button or Space / Enter near people and objects.</li><li><b>Use tool:</b> press the button or X. Your survey chain can reveal hidden markings.</li><li><b>Mobile:</b> hold a direction to walk. The game fits phone screens in portrait or landscape.</li></ul><p>This is an original fictional adventure inspired by documented local history and folklore. The supernatural plot is invented.</p>`);
+$("interactBtn").onclick=interact;$("toolBtn").onclick=useTool;
+document.querySelectorAll("[data-dir]").forEach(b=>{const d=b.dataset.dir;b.addEventListener("pointerdown",e=>{e.preventDefault();touch[d]=true;b.setPointerCapture?.(e.pointerId)});["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,e=>{touch[d]=false}))});
+window.addEventListener("keydown",e=>{keys[e.key.toLowerCase()]=true;if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();if((e.key===" "||e.key==="Enter")&&!e.repeat)interact();if(e.key.toLowerCase()==="x"&&!e.repeat)useTool();if(e.key.toLowerCase()==="j"&&!e.repeat)$("journalBtn").click()});
+window.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+function solid(tx,ty){const m=maps[state.map];if(m.exits.some(e=>e.x===tx&&e.y===ty))return false;if(tx<0||ty<0||tx>=COLS||ty>=ROWS)return true;const t=m.tiles[ty][tx];if(t==="2"||t==="w")return true;return m.objects.some(o=>Math.floor(o.x)===tx&&Math.floor(o.y)===ty&&["building","rock","well","wellcore","crystal"].includes(o.type))}
+function near(o){return Math.hypot((o.x+.5)-(state.x),(o.y+.5)-(state.y))<1.35}
+function addNote(n){if(!state.notes.includes(n)){state.notes.push(n);save()}}
+function interact(){const m=maps[state.map];const o=m.objects.find(near);if(!o){toast("Just wind over the grass. Keep exploring.");return}
+switch(o.type){
+case"stake":if(!state[o.id]){state[o.id]=true;addNote("Found a brass survey stake. Its markings are older than the settlement.");toast("Survey stake collected!")}else toast("The stake's coordinates are already in your notebook.");break;
+case"well":if(!state.wellSeen){state.wellSeen=true;addNote("A well beyond town emits a low, almost musical vibration. No rope reaches the bottom.");toast("A cold blue light flickers far below…")}else if(!state.visitedWell){state.map="well";state.x=2.5;state.y=5.5;state.visitedWell=true;addNote("A hidden stair spirals down into a chamber beneath the well.");toast("You descend beneath the Star-Well…")}else toast("The well hums in the same three-note pattern.");break;
+case"npc":if(o.id==="mara"){state.talkedMara=true;addNote("Mara, a stage-line cook, says the prairie lights appear on moonless nights near an old well.");modal("Mara, stage-line cook",`<p>“You’re mapping this country? Then mark this down: the lights out past the rise don’t move like lanterns. My grandmother told stories of a star that fell into the earth. Could be a tall tale. Still, the horses won't go near that well.”</p><p><i>She points toward the far eastern rise.</i></p>`)}else if(o.id==="louisa"){state.talkedLouisa=true;state.visitedTown=true;addNote("A determined Laramie resident says the new town must be measured fairly, for everyone who will live here.");modal("Louisa, a Laramie pioneer",`<p>“This town is still mostly canvas and mud, but it will matter what we build here. Make your map honest, surveyor. The railroad brings opportunity—and trouble.”</p><p>“Some say a stranger has been seen walking toward the well after midnight, leaving no tracks.”</p><p><small>Historical note: Laramie became known for early milestones in women's suffrage. This character and dialogue are fictional.</small></p>`)}else{modal("A Voice in the Stone",`<p>“MEASURE WHAT CANNOT BE SEEN.”</p><p>The voice sounds like wind passing through a telegraph wire. Three faint lights pulse in the dark.</p>`)}save();break;
+case"sign":toast(o.text+": the frontier is wider than any map.");break;
+case"building":toast(o.text+" is locked for the night. Try speaking with the townsfolk.");break;
+case"rock":toast("A dark rock, veined with a metal that catches starlight.");break;
+case"crystal":if(!state.shard){state.shard=true;addNote("Recovered a humming blue mineral from the chamber beneath the well.");toast("Star shard recovered!")}else toast("The crystal has gone dark.");save();break;
+case"wellcore":if(!state.shard){toast("A hollow socket waits for something that glows.");}else if(!state.coreSolved){state.coreSolved=true;addNote("The Star-Well answered the shard. The map's horizon has shifted.");modal("The Impossible Horizon",`<p>You place the blue shard in the stone socket. The well sings three clear notes. Your compass spins, then points toward a line of mountains that your map insists should be miles farther west.</p><p>For one heartbeat, the prairie sky opens like a second night sky beneath the earth. A path of light appears across the chamber.</p><p><b>Chapter One complete.</b> Your survey has found something that was never meant to be measured.</p><button onclick="window.finishChapter()">Continue surveying</button>`)}else toast("The shard's song still vibrates through the stone.");break;
+}}
+window.takeShard=()=>{state.shard=true;addNote("Reached into the Star-Well and recovered a humming blue shard.");save();closeModal();toast("The shard is cold as winter starlight.")};
+window.finishChapter=()=>{closeModal();state.map="plains";state.x=15.5;state.y=5.5;state.coreSolved=true;save();toast("New map revealed: The Impossible Horizon. More chapters can be added here.")};
+function useTool(){const m=maps[state.map];if(state.map==="plains"&&Math.hypot(state.x-10.5,state.y-2.5)<2){toast("The survey chain vibrates. A buried marker lies near the eastern rise.");addNote("The chain resonates near the dark rock.");return}if(state.map==="well"&&state.shard){toast("The shard answers the chain with a low three-note hum.");return}toast("You stretch the surveyor's chain. It catches the wind, but reveals no new boundary here.")}
+function enterExit(){const m=maps[state.map];for(const e of m.exits){if(Math.hypot(state.x-(e.x+.5),state.y-(e.y+.5))<.65){state.map=e.to;state.x=e.tx+.5;state.y=e.ty+.5;if(state.map==="town")state.visitedTown=true;if(state.map==="well")state.visitedWell=true;save();toast("Entered "+maps[state.map].name);return}}}
+function update(dt){let dx=0,dy=0;if(keys.arrowleft||keys.a||touch.left)dx--;if(keys.arrowright||keys.d||touch.right)dx++;if(keys.arrowup||keys.w||touch.up)dy--;if(keys.arrowdown||keys.s||touch.down)dy++;if(dx&&dy){dx*=.707;dy*=.707}const speed=3.1*dt;if(dx||dy){state.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"down":"up");const nx=state.x+dx*speed,ny=state.y+dy*speed;if(!solid(Math.floor(nx+.22),Math.floor(state.y+.22))&&!solid(Math.floor(nx-.22),Math.floor(state.y-.22)))state.x=nx;if(!solid(Math.floor(state.x+.22),Math.floor(ny+.22))&&!solid(Math.floor(state.x-.22),Math.floor(ny-.22)))state.y=ny;enterExit()}}
+function drawTile(t,x,y){const px=x*TILE,py=y*TILE;
+if(t==="g"){ctx.fillStyle="#637b4b";ctx.fillRect(px,py,TILE,TILE);ctx.fillStyle="#718958";if((x*7+y*11)%4===0)ctx.fillRect(px+5,py+8,3,2);if((x+y*3)%7===0)ctx.fillRect(px+22,py+24,2,3)}
+else if(t==="2"){ctx.fillStyle="#344c42";ctx.fillRect(px,py,TILE,TILE);ctx.fillStyle="#526b53";ctx.fillRect(px,py,TILE,4);ctx.fillStyle="#243b35";ctx.fillRect(px+4,py+8,5,3)}
+else if(t==="w"){ctx.fillStyle="#9b7750";ctx.fillRect(px,py,TILE,TILE);ctx.fillStyle="#c39b6a";ctx.fillRect(px,py,TILE,4);ctx.fillStyle="#745238";ctx.fillRect(px+3,py+14,TILE-6,3)}
+else if(t==="p"){ctx.fillStyle="#222b4a";ctx.fillRect(px,py,TILE,TILE);ctx.fillStyle="#2b365b";ctx.fillRect(px+4,py+5,2,2);ctx.fillRect(px+23,py+19,2,2);ctx.fillStyle="#6c79ad";if((x+y)%4===0)ctx.fillRect(px+14,py+12,2,2)}
+}
+function drawObject(o){const x=o.x*TILE,y=o.y*TILE;
+if(o.type==="stake"){ctx.fillStyle="#b88d4c";ctx.fillRect(x+13,y+5,6,23);ctx.fillStyle="#f4d68a";ctx.fillRect(x+11,y+4,10,5)}
+if(o.type==="sign"){ctx.fillStyle="#59402c";ctx.fillRect(x+14,y+13,4,18);ctx.fillStyle="#b68a4e";ctx.fillRect(x+2,y+4,28,13);ctx.fillStyle="#ead1a1";ctx.fillRect(x+5,y+7,22,2)}
+if(o.type==="well"||o.type==="wellcore"){ctx.fillStyle="#6b7377";ctx.fillRect(x+3,y+6,26,22);ctx.fillStyle="#a6aaa5";ctx.fillRect(x+2,y+5,28,7);ctx.fillStyle=o.type==="wellcore"?"#55d7e8":"#101b29";ctx.fillRect(x+7,y+11,18,13);ctx.fillStyle="#202a34";ctx.fillRect(x+10,y+14,12,7);if(o.type==="wellcore"){ctx.fillStyle="#7cf3ff";ctx.fillRect(x+14,y+15,4,4)}}
+if(o.type==="npc"){ctx.fillStyle="#33271e";ctx.fillRect(x+8,y+7,16,22);ctx.fillStyle="#d6ad7b";ctx.fillRect(x+10,y+3,12,10);ctx.fillStyle=o.id==="louisa"?"#9d5c46":"#476f72";ctx.fillRect(x+7,y+13,18,13);ctx.fillStyle="#e0c7a0";ctx.fillRect(x+8,y+2,16,4)}
+if(o.type==="rock"){ctx.fillStyle="#4b5050";ctx.fillRect(x+5,y+12,22,17);ctx.fillStyle="#7a8581";ctx.fillRect(x+10,y+7,12,10);ctx.fillStyle="#a0d8d5";ctx.fillRect(x+15,y+13,3,7)}
+if(o.type==="building"){ctx.fillStyle="#72543b";ctx.fillRect(x+1,y+5,30,27);ctx.fillStyle="#a17a51";ctx.fillRect(x-1,y+3,34,7);ctx.fillStyle="#3a2922";ctx.fillRect(x+11,y+17,10,15);ctx.fillStyle="#d6b47a";ctx.fillRect(x+3,y+11,7,6);ctx.fillRect(x+22,y+11,7,6)}
+if(o.type==="crystal"){ctx.fillStyle="#6bd9eb";ctx.beginPath();ctx.moveTo(x+16,y+3);ctx.lineTo(x+26,y+16);ctx.lineTo(x+16,y+29);ctx.lineTo(x+6,y+16);ctx.closePath();ctx.fill();ctx.fillStyle="#d4fbff";ctx.fillRect(x+14,y+8,3,13)}
+}
+function drawPlayer(){const x=state.x*TILE,y=state.y*TILE;ctx.fillStyle="#15191d";ctx.fillRect(x-7,y+8,14,17);ctx.fillStyle="#d5ad7c";ctx.fillRect(x-5,y-1,10,12);ctx.fillStyle="#5a3929";ctx.fillRect(x-7,y-4,14,5);ctx.fillStyle="#b98a4e";ctx.fillRect(x-8,y+10,16,9);ctx.fillStyle="#2b3d49";ctx.fillRect(x-6,y+19,5,8);ctx.fillRect(x+1,y+19,5,8);if(state.dir==="left")ctx.fillRect(x-9,y+12,3,7);if(state.dir==="right")ctx.fillRect(x+6,y+12,3,7)}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const m=maps[state.map];for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)drawTile(m.tiles[y][x],x,y);m.objects.forEach(drawObject);drawPlayer();
+ctx.fillStyle="#0c1421d9";ctx.fillRect(8,8,190,26);ctx.fillStyle="#f2d9a1";ctx.font="bold 13px monospace";ctx.fillText(m.name,16,25);
+if(state.map==="plains"){ctx.fillStyle="#101b2a";ctx.fillRect(450,10,180,44);ctx.fillStyle="#bcd0e8";ctx.font="11px monospace";ctx.fillText("N 41°18' · W 105°35'",458,26);ctx.fillText("SURVEY LOG "+(state.stake1?1:0)+(state.stake2?1:0),458,42)}
+}
+function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;update(dt);draw();$("health").textContent="♥ ".repeat(state.health).trim()||"—";$("objective").textContent=objective();$("tool").textContent="Tool: "+(state.shard?"Survey chain + star shard":"Surveyor's chain");requestAnimationFrame(frame)}
+canvas.addEventListener("pointerdown",e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*canvas.width,y=(e.clientY-r.top)/r.height*canvas.height;const px=state.x*TILE,py=state.y*TILE;if(Math.abs(x-px)>30||Math.abs(y-py)>30){const dx=x-px,dy=y-py;if(Math.abs(dx)>Math.abs(dy))touch[dx>0?"right":"left"]=true;else touch[dy>0?"down":"up"]=true;setTimeout(()=>Object.keys(touch).forEach(k=>touch[k]=false),250)}});
+if(!state.notes.length)addNote("You arrive on the Laramie Plains in 1867 with a brass survey chain and a blank field book.");
+requestAnimationFrame(frame);
+})();
