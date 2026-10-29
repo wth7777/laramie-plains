@@ -1,4 +1,5 @@
 // mark.js
+window.__markExecuted = true;
 const div = document.createElement('div');
 div.id = 'test-mark';
 div.textContent = 'SCRIPT EXECUTED';
