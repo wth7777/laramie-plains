@@ -1,113 +1,1203 @@
-/* Laramie Plains: The Well Beyond the Stars — original browser adventure.
-   No external libraries, assets, APIs, or game ROMs. */
+/* ============================================================
+   LARAMIE PLAINS: ECHOES OF THE SURVEY
+   One-up version — better graphics + full sound
+   Pure canvas, no external assets. Ready for GitHub Pages.
+   ============================================================ */
 (() => {
-'use strict';
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-ctx.imageSmoothingEnabled=false;
-const atlas=new Image(); atlas.src='sprites.png'; let animClock=0;
-const W=640,H=400,T=32,C=20,R=12;
-const zones={
- camp:{name:'Survey Camp',biome:'prairie',start:[2.5,5.5],tiles:['####################','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','####################'],objects:[{x:5,y:3,k:'sign',id:'campSign',label:'Survey Camp'},{x:9,y:5,k:'stake',id:'stakeA'},{x:14,y:7,k:'stake',id:'stakeB'},{x:17,y:3,k:'well',id:'well'},{x:3,y:8,k:'npc',id:'mara'},{x:10,y:2,k:'rock',id:'strangeRock'},{x:7,y:7,k:'chest',id:'chestCamp',item:'potion'}],links:[{x:19,y:5,to:'town',tx:1,ty:5},{x:11,y:1,to:'ridge',tx:10,ty:10}]},
- town:{name:'Laramie Tent Town',biome:'town',start:[2.5,5.5],tiles:['####################','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggwwggggggwwggggg#','#gggwwggggggwwggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#ggggwwgggggggggggg#','#ggggwwgggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','####################'],objects:[{x:4,y:3,k:'building',label:'General Store'},{x:12,y:3,k:'building',label:'Survey Office'},{x:7,y:8,k:'npc',id:'louisa'},{x:15,y:7,k:'npc',id:'deputy'},{x:16,y:9,k:'chest',id:'townChest',item:'coins'},{x:3,y:9,k:'sign',label:'Town notice board'}],links:[{x:0,y:5,to:'camp',tx:18,ty:5},{x:19,y:5,to:'railhead',tx:1,ty:5}]},
- railhead:{name:'End of the Rails',biome:'town',start:[2.5,5.5],tiles:['####################','#gggggggggggggggggg#','#gggggggggggggggggg#','#ggwwggggggggggwwgg#','#ggwwggggggggggwwgg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#ggggggggwwgggggggg#','#ggggggggwwgggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','####################'],objects:[{x:4,y:3,k:'building',label:'Freight Office'},{x:9,y:7,k:'npc',id:'engineer'},{x:15,y:8,k:'enemy',id:'ruffian1',hp:2},{x:16,y:4,k:'chest',id:'railChest',item:'sword'},{x:11,y:2,k:'sign',label:'Tracks end here'}],links:[{x:0,y:5,to:'town',tx:18,ty:5},{x:10,y:11,to:'ridge',tx:15,ty:1}]},
- ridge:{name:'The Wind-Carved Ridge',biome:'ridge',start:[10.5,10.5],tiles:['####################','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','####################'],objects:[{x:4,y:3,k:'enemy',id:'coyote1',hp:2},{x:15,y:4,k:'enemy',id:'coyote2',hp:2},{x:10,y:6,k:'shrine',id:'shrine'},{x:5,y:8,k:'chest',id:'ridgeChest',item:'heart'},{x:17,y:8,k:'sign',label:'A narrow path descends'}],links:[{x:10,y:0,to:'camp',tx:10,ty:2},{x:15,y:0,to:'railhead',tx:10,ty:9},{x:19,y:5,to:'canyon',tx:1,ty:5}]},
- canyon:{name:'La Ramée Canyon',biome:'canyon',start:[2.5,5.5],tiles:['####################','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','#gggggggggggggggggg#','####################'],objects:[{x:5,y:4,k:'enemy',id:'shade1',hp:3},{x:13,y:7,k:'enemy',id:'shade2',hp:3},{x:10,y:5,k:'cave',id:'caveDoor'},{x:16,y:3,k:'chest',id:'canyonChest',item:'key'},{x:6,y:8,k:'marker',id:'lostMarker'}],links:[{x:0,y:5,to:'ridge',tx:18,ty:5},{x:10,y:0,to:'well',tx:10,ty:10}]},
- well:{name:'The Star-Well',biome:'dungeon',start:[10.5,10.5],tiles:['####################','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','####################'],objects:[{x:10,y:5,k:'core',id:'core'},{x:5,y:3,k:'crystal',id:'crystalA'},{x:15,y:7,k:'crystal',id:'crystalB'},{x:10,y:2,k:'npc',id:'echo'},{x:4,y:8,k:'enemy',id:'wisp1',hp:2},{x:16,y:4,k:'enemy',id:'wisp2',hp:2},{x:10,y:9,k:'chest',id:'wellChest',item:'key'}],links:[{x:10,y:11,to:'canyon',tx:10,ty:1}]},
- vault:{name:'The Understar Vault',biome:'dungeon',start:[2.5,9.5],tiles:['####################','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','#pppppppppppppppppp#','####################','####################'],objects:[{x:5,y:4,k:'enemy',id:'warden1',hp:3},{x:14,y:4,k:'enemy',id:'warden2',hp:3},{x:10,y:3,k:'switch',id:'switchA'},{x:10,y:7,k:'boss',id:'starWarden',hp:8},{x:17,y:8,k:'chest',id:'vaultChest',item:'heart'},{x:10,y:9,k:'portal',id:'exitPortal'}],links:[{x:2,y:10,to:'well',tx:10,ty:8}]}
-};
-const fresh=()=>({map:'camp',x:2.5,y:5.5,dir:'down',hp:5,maxHp:5,coins:0,hasSword:false,hasChain:true,hasShard:false,hasKey:false,hasMap:false,hasCompass:false,hasBoots:false,stakes:{},opened:{},dead:{},talked:{},flags:{},notes:['1867: You arrive on the Laramie Plains with a brass survey chain and a blank field book.'],quests:{stakes:false,town:false,rail:false,shrine:false,well:false,vault:false},bossHp:8,gameWon:false});
-let s=fresh();try{const v=localStorage.getItem('laramieWellFullSave');if(v)s={...s,...JSON.parse(v),stakes:{...s.stakes,...JSON.parse(v).stakes},opened:{...s.opened,...JSON.parse(v).opened},dead:{...s.dead,...JSON.parse(v).dead},talked:{...s.talked,...JSON.parse(v).talked},flags:{...s.flags,...JSON.parse(v).flags},notes:JSON.parse(v).notes||s.notes,quests:{...s.quests,...JSON.parse(v).quests}}}catch{}
-let keys={},touch={up:false,down:false,left:false,right:false},last=0,toastTimer=0,attackCd=0,invuln=0,interactCd=0,particles=[],soundOn=false,audio=null;
-const $=id=>document.getElementById(id);
-function save(){localStorage.setItem('laramieWellFullSave',JSON.stringify(s));updateHud()}
-function say(msg){$('toast').textContent=msg;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
-function note(t){if(!s.notes.includes(t)){s.notes.push(t);save()}}
-function addCoins(n){s.coins+=n;save()}
-function current(){return zones[s.map]}
-function objAlive(o){return !(o.k==='enemy'&&s.dead[o.id])}
-function near(o){return Math.hypot((o.x+.5)-s.x,(o.y+.5)-s.y)<1.35}
-function wall(x,y){if(x<0||y<0||x>=C||y>=R)return true;const z=current();if(z.links.some(l=>l.x===x&&l.y===y))return false;const t=z.tiles[y][x];if(t==='#'||t==='w')return true;return z.objects.some(o=>Math.floor(o.x)===x&&Math.floor(o.y)===y&&objAlive(o)&&['building','rock','well','core','crystal','cave','boss','switch','portal'].includes(o.k))}
-function transfer(link){s.map=link.to;s.x=link.tx+.5;s.y=link.ty+.5;s.dir='down';if(s.map==='town')s.quests.town=true;if(s.map==='well'&&!s.flags.sawWell){s.flags.sawWell=true;note('The well descends into a chamber that should not fit beneath the prairie.');say('The Star-Well opens beneath your feet.')}if(s.map==='vault'&&!s.flags.vaultIntro){s.flags.vaultIntro=true;note('The Understar Vault is older than any human settlement on these plains.');say('A low hum shakes dust from the stone.')}save()}
-function interact(){if(interactCd>0)return;interactCd=.18;const z=current(),o=z.objects.find(o=>near(o)&&objAlive(o));if(!o){say('Nothing close enough to examine.');return}
-switch(o.k){
-case'stake':if(!s.stakes[o.id]){s.stakes[o.id]=true;note('A brass survey stake bears coordinates that do not match the stars.');say('Survey stake collected.')}else say('The stake is already recorded.');if(s.stakes.stakeA&&s.stakes.stakeB&&!s.quests.stakes){s.quests.stakes=true;note('Both survey stakes align to a point beneath the old well.');say('Quest updated: investigate the old well.')}save();break;
-case'well':if(!s.quests.stakes){dialog('The Old Well',`The rim is etched with strange markings. Your survey chain trembles, but you need the two brass stakes to calculate its position.`)}else{dialog('The Star-Well',`The well answers your measurements with three clear tones. A narrow stairway appears in the dark. The old stories might be nonsense—but the stone is undeniably warm.`)}break;
-case'npc':talk(o.id);break;
-case'sign':dialog(o.label,`The weathered board reads: “${o.label}.” Your field book records the route. The wind carries the distant sound of a train that has not yet arrived.`);break;
-case'building':dialog(o.label,'The building smells of coal smoke, wet canvas, and fresh-cut timber. It is locked for the night.');break;
-case'rock':dialog('A Strange Stone','The stone is threaded with a blue mineral. Your compass needle points straight down. You mark the spot in your notebook.');note('A dark rock near camp contains a blue mineral that makes the compass point downward.');break;
-case'chest':openChest(o);break;
-case'shrine':if(!s.quests.stakes){dialog('Wind Shrine','A stone marker stands in a ring of wind-carved rocks. It seems to be waiting for a surveyor who can read the land.')}else if(!s.quests.shrine){s.quests.shrine=true;s.hasMap=true;s.hasCompass=true;note('The ridge shrine grants a map and compass. The old survey lines reveal a path to La Ramée Canyon.');dialog('Wind Shrine','The survey stakes align with the ridge. A hidden compartment opens: inside are an old map and compass. Canyon trails now appear on your map.')}else say('The shrine is quiet. The map and compass are yours.');save();break;
-case'cave':if(!s.hasKey){dialog('Sealed Stone Door','A door is cut into the canyon wall. The lock is made of brass, not iron. You need a key.')}else{dialog('The Understar Door','Your brass key turns with a sound like a bell. Beyond the door, a stair descends toward the impossible sky.');s.flags.doorOpen=true;save();setTimeout(()=>{closeDialog();transfer({to:'vault',tx:2,ty:9});say('Entered the Understar Vault. Find the switch before facing the guardian.');},700);}break;
-case'crystal':if(!s.hasShard){s.hasShard=true;note('A blue star shard pulses in your palm like a living compass.');say('Star shard acquired!')}else say('The crystal has gone dark.');save();break;
-case'core':if(!s.hasShard){dialog('The Stone Engine','Three empty sockets surround a silent mechanism. A shard of blue crystal might wake it.')}else if(!s.quests.well){s.quests.well=true;s.hasKey=true;note('The Star-Well answered the shard and revealed a brass key. Something beneath the canyon has awakened.');dialog('The Stone Engine','You set the shard into the socket. The room fills with a chord. A brass key rises from the stone, and a second doorway opens beneath the canyon.')}else say('The mechanism hums in tune with your shard.');save();break;
-case'enemy':say('A hostile creature blocks the way. Swing your sword with USE TOOL.');break;
-case'switch':if(!s.flags.switchA){s.flags.switchA=true;note('The vault switch opens the seal around the guardian.');say('A stone seal grinds open. The guardian stirs.')}else say('The switch is already thrown.');save();break;
-case'boss':if(!s.flags.switchA){dialog('The Star Warden','A towering figure of stone and starlight stands motionless. The seal is still active. Find the switch in this chamber.')}else say('The Star Warden is vulnerable! Strike it with your sword.');break;
-case'portal':if(s.gameWon){dialog('The Way Home','The sky above the plains is ordinary again. Your map will never be the same.')}else if(s.flags.bossDefeated){s.gameWon=true;save();ending()}else say('The portal remains sealed. The guardian still lives.');break;
-case'marker':dialog('Lost Survey Marker','The marker is inscribed with a name: LA RAMÉE. A scrap of paper has been wedged beneath it, bearing two conflicting accounts of the trapper’s disappearance.');note('The canyon marker recalls Jacques La Ramée, the early explorer whose disappearance became a local legend.');break;
-}}
-function talk(id){if(id==='mara'){note('Mara says strange lights appear near a well beyond the rise on moonless nights.');dialog('Mara, stage-line cook','“I have seen lights out east that move against the wind. My grandmother said a star fell there before the first road crossed the plains. Maybe a story. Still, the horses will not go near that well.”')}else if(id==='louisa'){s.quests.town=true;note('Louisa insists the new town must be measured fairly for everyone who will live here.');dialog('Louisa, Laramie pioneer','“This place is more canvas than town, but what we build matters. Make your map honest, surveyor. Wyoming has made a bold promise about equality. Let us see that the promise survives the frontier.”')}else if(id==='deputy'){if(!s.hasSword){dialog('Deputy Hale','“The railhead is rough after sundown. A freight crate went missing. Find it and the sword inside is yours—if you can handle it.”')}else{note('Deputy Hale warns that the railroad brought opportunity and lawlessness in equal measure.');dialog('Deputy Hale','“Keep your blade ready out past the tracks. And do not believe every tale you hear about the canyon. Some tales are worse than the truth.”')}}else if(id==='engineer'){s.quests.rail=true;note('A railroad engineer describes lights hovering beyond the end of the track before dawn.');dialog('Railroad Engineer','“The rails stop here for now, but last week I saw blue lights hovering over the ridge. They vanished into the ground. I told the foreman it was swamp gas. He laughed, but he will not work the night shift anymore.”')}else if(id==='echo'){dialog('The Voice Below','“MEASURE WHAT CANNOT BE SEEN. THE LAND REMEMBERS EVERY LINE.” The voice seems to come from inside your brass chain.')}save()}
-function openChest(o){if(s.opened[o.id]){say('The chest is empty.');return}s.opened[o.id]=true;let msg='';if(o.item==='potion'){s.hp=Math.min(s.maxHp,s.hp+2);msg='A tonic restores two hearts.'}if(o.item==='coins'){addCoins(12);msg='You found 12 old coins.'}if(o.item==='sword'){s.hasSword=true;note('Recovered a serviceable frontier sword from a lost freight crate.');msg='You found the surveyor’s sword. USE TOOL now attacks.'}if(o.item==='heart'){s.maxHp=Math.min(8,s.maxHp+1);s.hp=s.maxHp;msg='A heart container increases your maximum health.'}if(o.item==='key'){s.hasKey=true;msg='You found an old brass key.'}save();dialog('Treasure Chest',msg)}
-function attack(){if(attackCd>0)return;attackCd=.36;if(!s.hasSword){say('You swing your survey chain, but it is no weapon. Find the lost freight sword.');return}const z=current();let hit=false;for(const o of z.objects){if(!objAlive(o))continue;const dx=(o.x+.5)-s.x,dy=(o.y+.5)-s.y,d=Math.hypot(dx,dy);if(d<1.45){const facing=(s.dir==='left'&&dx<.2)||(s.dir==='right'&&dx>-.2)||(s.dir==='up'&&dy<.2)||(s.dir==='down'&&dy>-.2);if(!facing)continue;if(o.k==='enemy'){o.hp--;hit=true;burst((o.x+.5)*T,(o.y+.5)*T,'#f0d18b');if(o.hp<=0){s.dead[o.id]=true;addCoins(3);note('A hostile shade dissolved into dust and blue sparks.')}else say('Hit! Keep your distance.')}else if(o.k==='boss'&&s.flags.switchA){s.bossHp--;hit=true;burst((o.x+.5)*T,(o.y+.5)*T,'#76e9f7');if(s.bossHp<=0){s.dead[o.id]=true;s.flags.bossDefeated=true;note('The Star Warden fell. The Understar Vault fell silent, and a way home appeared.');say('The Star Warden is defeated!')}else say('The Star Warden recoils from your blade.')} }
-}if(!hit)say('Your blade cuts only the cold air.');save()}
-function useTool(){if(s.map==='well'&&s.hasShard){say('The shard answers the survey chain with a low three-note hum.');return}if(s.map==='camp'&&Math.hypot(s.x-10.5,s.y-2.5)<2.2){say('The chain vibrates. A buried marker lies near the eastern rise.');note('The survey chain resonates near a strange dark rock.');return}if(s.map==='vault'){const o=current().objects.find(o=>o.k==='boss'&&near(o));if(o){attack();return}}attack()}
-function burst(x,y,color){for(let i=0;i<8;i++)particles.push({x,y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.4,color})}
-function damage(){if(invuln>0)return;invuln=1;s.hp--;if(s.hp<=0){s.hp=Math.max(1,s.hp);s.x=current().start[0];s.y=current().start[1];s.map='camp';s.coins=Math.max(0,s.coins-5);say('You wake at camp, shaken. Five coins were lost.')}else say('Ouch! Watch your step.');save()}
-function move(dt){let dx=0,dy=0;if(keys.arrowleft||keys.a||touch.left)dx--;if(keys.arrowright||keys.d||touch.right)dx++;if(keys.arrowup||keys.w||touch.up)dy--;if(keys.arrowdown||keys.s||touch.down)dy++;if(dx&&dy){dx*=.707;dy*=.707}if(dx||dy){s.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');const sp=(s.hasBoots?3.7:3.1)*dt,nx=s.x+dx*sp,ny=s.y+dy*sp;if(!wall(Math.floor(nx+.2),Math.floor(s.y+.2))&&!wall(Math.floor(nx-.2),Math.floor(s.y-.2)))s.x=nx;if(!wall(Math.floor(s.x+.2),Math.floor(ny+.2))&&!wall(Math.floor(s.x-.2),Math.floor(ny-.2)))s.y=ny;for(const l of current().links){if(Math.hypot(s.x-(l.x+.5),s.y-(l.y+.5))<.95){transfer(l);break}}}
-// Simple enemy pursuit and contact damage.
-for(const o of current().objects){if(o.k!=='enemy'||!objAlive(o))continue;const dx=s.x-(o.x+.5),dy=s.y-(o.y+.5),d=Math.hypot(dx,dy);if(d<.6){damage();continue}if(d<4&&d>.8){const vx=Math.sign(dx)*dt*.48,vy=Math.sign(dy)*dt*.48;const ex=o.x+.5+vx,ey=o.y+.5+vy;if(!wall(Math.floor(ex),Math.floor(o.y+.5)))o.x+=vx;if(!wall(Math.floor(o.x+.5),Math.floor(ey)))o.y+=vy}}
-}
-function tile(t,x,y){let px=x*T,py=y*T;
-if(t==='#'){ctx.drawImage(atlas,6*32,0,32,32,px,py,T,T);ctx.fillStyle='#2f493d';ctx.fillRect(px,py+25,T,7)}
-else if(t==='w'){ctx.drawImage(atlas,4*32,0,32,32,px,py,T,T)}
-else if(t==='p'){ctx.drawImage(atlas,5*32,0,32,32,px,py,T,T);if((x*3+y*7)%5===0){ctx.fillStyle='#9daee0';ctx.fillRect(px+6,py+9,2,2)}}
-else{const b=(current().biome==='canyon'?1:current().biome==='ridge'?2:current().biome==='town'?3:0);ctx.drawImage(atlas,((x*13+y*7+b)%4)*32,0,32,32,px,py,T,T);
-if((x*5+y*3)%19===0){ctx.fillStyle='#435d3e';ctx.fillRect(px+23,py+23,3,4);ctx.fillStyle='#82935a';ctx.fillRect(px+21,py+20,7,4)}
-if(current().biome==='ridge'&&(x+y)%4===0){ctx.fillStyle='#b2b89b';ctx.fillRect(px+4,py+4,7,3)}}}
-function drawObj(o){const x=o.x*T,y=o.y*T;
-const spriteMap={stake:[0,1],sign:[1,1],well:[2,1],core:[2,1],rock:[3,1],building:[4,1],crystal:[5,1],chest:[6,1]};
-if(o.k==='npc'){let c=o.id==='louisa'?1:o.id==='deputy'?2:0;ctx.drawImage(atlas,c*32,64,32,32,x,y,32,32);if(Math.hypot((o.x+.5)-s.x,(o.y+.5)-s.y)<1.3){ctx.fillStyle='#f4d99b';ctx.fillRect(x+14,y-5,4,4)}return}
-if(spriteMap[o.k] && ['stake','sign','well','core','rock','building','crystal'].includes(o.k)){let [c,r]=spriteMap[o.k];ctx.drawImage(atlas,c*32,r*32,32,32,x,y,32,32);if(o.k==='crystal'){ctx.save();ctx.globalAlpha=.2+.2*Math.sin(animClock*5);ctx.fillStyle='#52eaff';ctx.beginPath();ctx.arc(x+16,y+16,20,0,Math.PI*2);ctx.fill();ctx.restore()}if(o.k==='core'&&s.hasShard){ctx.save();ctx.globalAlpha=.22+.15*Math.sin(animClock*4);ctx.fillStyle='#4deaff';ctx.beginPath();ctx.arc(x+16,y+17,25,0,Math.PI*2);ctx.fill();ctx.restore()}return}
-if(o.k==='stake'){ctx.fillStyle='#b88d4c';ctx.fillRect(x+13,y+5,6,23);ctx.fillStyle='#f4d68a';ctx.fillRect(x+11,y+4,10,5)}else if(o.k==='sign'){ctx.fillStyle='#59402c';ctx.fillRect(x+14,y+13,4,18);ctx.fillStyle='#b68a4e';ctx.fillRect(x+2,y+4,28,13);ctx.fillStyle='#ead1a1';ctx.fillRect(x+5,y+7,22,2)}else if(['well','core'].includes(o.k)){ctx.fillStyle='#707a7d';ctx.fillRect(x+3,y+6,26,22);ctx.fillStyle='#b1b4a9';ctx.fillRect(x+2,y+5,28,7);ctx.fillStyle=o.k==='core'?'#51d5e8':'#101b29';ctx.fillRect(x+7,y+11,18,13);ctx.fillStyle='#172131';ctx.fillRect(x+10,y+14,12,7);if(o.k==='core'){ctx.fillStyle=s.hasShard?'#8df7ff':'#56687c';ctx.fillRect(x+14,y+15,4,4)}}else if(o.k==='npc'){ctx.fillStyle='#33271e';ctx.fillRect(x+8,y+7,16,22);ctx.fillStyle='#d6ad7b';ctx.fillRect(x+10,y+3,12,10);ctx.fillStyle=o.id==='louisa'?'#a85c46':o.id==='echo'?'#3f9ab0':'#476f72';ctx.fillRect(x+7,y+13,18,13);ctx.fillStyle='#e0c7a0';ctx.fillRect(x+8,y+2,16,4)}else if(o.k==='rock'){ctx.fillStyle='#4b5050';ctx.fillRect(x+5,y+12,22,17);ctx.fillStyle='#7a8581';ctx.fillRect(x+10,y+7,12,10);ctx.fillStyle='#a0d8d5';ctx.fillRect(x+15,y+13,3,7)}else if(o.k==='building'){ctx.fillStyle='#72543b';ctx.fillRect(x+1,y+5,30,27);ctx.fillStyle='#a17a51';ctx.fillRect(x-1,y+3,34,7);ctx.fillStyle='#3a2922';ctx.fillRect(x+11,y+17,10,15);ctx.fillStyle='#d6b47a';ctx.fillRect(x+3,y+11,7,6);ctx.fillRect(x+22,y+11,7,6)}else if(o.k==='chest'){ctx.fillStyle=s.opened[o.id]?'#594d39':'#a76c37';ctx.fillRect(x+4,y+12,24,16);ctx.fillStyle='#e0b96b';ctx.fillRect(x+4,y+12,24,5);ctx.fillStyle='#5b442b';ctx.fillRect(x+14,y+15,4,7)}else if(o.k==='enemy'){ctx.fillStyle='#1a1d27';ctx.fillRect(x+6,y+9,20,18);ctx.fillStyle=o.id.startsWith('wisp')?'#69dce8':'#a3a5ad';ctx.fillRect(x+9,y+5,14,13);ctx.fillStyle='#fae7a1';ctx.fillRect(x+11,y+10,3,3);ctx.fillRect(x+18,y+10,3,3)}else if(o.k==='crystal'){ctx.fillStyle='#6bd9eb';ctx.beginPath();ctx.moveTo(x+16,y+3);ctx.lineTo(x+26,y+16);ctx.lineTo(x+16,y+29);ctx.lineTo(x+6,y+16);ctx.closePath();ctx.fill();ctx.fillStyle='#d4fbff';ctx.fillRect(x+14,y+8,3,13)}else if(o.k==='shrine'){ctx.fillStyle='#6c746f';ctx.fillRect(x+5,y+10,22,20);ctx.fillStyle='#b4c0b0';ctx.fillRect(x+9,y+5,14,9);ctx.fillStyle='#c4e9c2';ctx.fillRect(x+14,y+12,4,8)}else if(o.k==='cave'){ctx.fillStyle='#b4a07a';ctx.fillRect(x+3,y+4,26,27);ctx.fillStyle='#151b22';ctx.fillRect(x+8,y+10,16,21)}else if(o.k==='marker'){ctx.fillStyle='#a2a49b';ctx.fillRect(x+12,y+4,8,27);ctx.fillStyle='#d8d5c6';ctx.fillRect(x+7,y+4,18,8)}else if(o.k==='switch'){ctx.fillStyle=s.flags.switchA?'#70d9de':'#9c7c52';ctx.fillRect(x+5,y+11,22,15);ctx.fillStyle='#e6d6a0';ctx.fillRect(x+13,y+5,6,13)}else if(o.k==='boss'){ctx.fillStyle='#141b2b';ctx.fillRect(x+3,y+2,26,29);ctx.fillStyle='#596d82';ctx.fillRect(x+6,y+5,20,23);ctx.fillStyle='#7ef2ff';ctx.fillRect(x+8,y+10,5,4);ctx.fillRect(x+19,y+10,5,4);ctx.fillStyle='#a5c6d7';ctx.fillRect(x+10,y+22,12,3)}else if(o.k==='portal'){ctx.strokeStyle=s.flags.bossDefeated?'#8bf5ff':'#3c4a61';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(x+16,y+16,11,14,0,0,Math.PI*2);ctx.stroke()}}
-function player(){let x=s.x*T,y=s.y*T;if(invuln>0&&Math.floor(invuln*12)%2===0)return;
-ctx.fillStyle='#263329';ctx.beginPath();ctx.ellipse(x,y+24,10,4,0,0,Math.PI*2);ctx.fill();
-const moving=keys.arrowleft||keys.arrowright||keys.arrowup||keys.arrowdown||keys.w||keys.a||keys.s||keys.d||Object.values(touch).some(Boolean);const bob=moving?Math.sin(animClock*16)*1.5:0;ctx.save();ctx.translate(0,bob);
-ctx.fillStyle='#273d49';ctx.fillRect(x-6,y+15,5,11);ctx.fillRect(x+1,y+15,5,11);ctx.fillStyle='#59402d';ctx.fillRect(x-7,y+24,6,3);ctx.fillRect(x+1,y+24,6,3);
-ctx.fillStyle='#426b79';ctx.fillRect(x-8,y+7,16,13);ctx.fillRect(x-10,y+9,3,8);ctx.fillRect(x+7,y+9,3,8);ctx.fillStyle='#c9a15e';ctx.fillRect(x-1,y+8,2,10);
-ctx.fillStyle='#d8ae7c';ctx.fillRect(x-5,y-2,10,11);ctx.fillStyle='#382a24';ctx.fillRect(x-4,y+2,2,2);ctx.fillRect(x+2,y+2,2,2);ctx.fillStyle='#3d3026';ctx.fillRect(x-8,y-5,16,4);ctx.fillRect(x-5,y-9,10,5);ctx.fillStyle='#a77b45';ctx.fillRect(x-5,y-5,10,1);
-if(s.hasShard){ctx.fillStyle='#8ff5ff';ctx.fillRect(x+8,y+10,3,3)}ctx.restore();
-if(s.hasSword&&attackCd>.22){ctx.fillStyle='#f5f3d7';ctx.strokeStyle='#6b8492';ctx.lineWidth=1;if(s.dir==='left')ctx.fillRect(x-22,y+5,16,3);if(s.dir==='right')ctx.fillRect(x+6,y+5,16,3);if(s.dir==='up')ctx.fillRect(x-2,y-18,3,16);if(s.dir==='down')ctx.fillRect(x-2,y+8,3,16)}}
-function drawExits(z){
-// Paint unmistakable open trail mouths over the mountain border, with a short path leading to each one.
-for(const l of z.links){
- const horizontal=(l.x===0||l.x===C-1), vertical=(l.y===0||l.y===R-1);
- const cells=horizontal?[{x:l.x===0?0:C-1,y:l.y},{x:l.x===0?1:C-2,y:l.y}]:vertical?[{x:l.x,y:l.y===0?0:R-1},{x:l.x,y:l.y===0?1:R-2}]:[{x:l.x,y:l.y}];
- for(const c of cells){const px=c.x*T,py=c.y*T;ctx.fillStyle='#789b55';ctx.fillRect(px,py,T,T);ctx.fillStyle='#b9ad79';if(horizontal){ctx.fillRect(px+(c.x===0?17:0),py+10,c.x===0?15:15,12);ctx.fillStyle='#6d8e4e';ctx.fillRect(px+3,py+4,26,24)}else{ctx.fillRect(px+10,py+(c.y===0?17:0),12,15);ctx.fillStyle='#6d8e4e';ctx.fillRect(px+3,py+3,26,26)}}
- // Gold trail marker and directional arrow so exits are easy to spot on phones.
- const cx=(l.x+.5)*T,cy=(l.y+.5)*T;ctx.fillStyle='#f4d99b';ctx.fillRect(cx-7,cy-7,14,3);ctx.fillRect(cx-7,cy+4,14,3);ctx.fillRect(cx-7,cy-7,3,14);ctx.fillRect(cx+4,cy-7,3,14);
- ctx.fillStyle='#fff1b9';ctx.font='bold 11px monospace';ctx.textAlign='center';let label=l.to==='town'?'TOWN':l.to==='railhead'?'RAILHEAD':l.to==='ridge'?'RIDGE':l.to==='canyon'?'CANYON':l.to==='well'?'STAR-WELL':'EXIT';
- if(horizontal){let lx=l.x===0?42:W-42;ctx.fillText((l.x===0?'◀ ':'▶ ')+label,lx,cy-12)}else{ctx.fillText((l.y===0?'▲ ':'▼ ')+label,cx, l.y===0?cy+26:cy-12)}ctx.textAlign='start';
- }
-}
-function draw(){animClock=performance.now()/1000;ctx.clearRect(0,0,W,H);const z=current();for(let y=0;y<R;y++)for(let x=0;x<C;x++)tile(z.tiles[y][x],x,y);drawExits(z);z.objects.forEach(o=>{if(objAlive(o))drawObj(o)});player();particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/.4);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
-const moteCount=z.biome==='well'||z.biome==='dungeon'?22:10;for(let i=0;i<moteCount;i++){let mx=(i*83+Math.sin(animClock*.7+i*2)*14+animClock*(z.biome==='well'||z.biome==='dungeon'?4:1.5))%W;let my=(i*47+Math.sin(animClock*.9+i)*11+480)%H;ctx.globalAlpha=(z.biome==='well'||z.biome==='dungeon')?.24+.2*Math.sin(animClock*2+i):.10;ctx.fillStyle=(z.biome==='well'||z.biome==='dungeon')?'#8befff':'#f0dfad';ctx.fillRect(mx,my,2,2)}ctx.globalAlpha=1;
-if(z.biome==='well'||z.biome==='dungeon'){let glow=ctx.createRadialGradient(W/2,H/2,8,W/2,H/2,220);glow.addColorStop(0,'#277d9a12');glow.addColorStop(1,'#080f2c77');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H)}
-let vg=ctx.createRadialGradient(W/2,H/2,130,W/2,H/2,410);vg.addColorStop(0,'#00000000');vg.addColorStop(1,'#0b111a55');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.fillStyle='#0c1421df';ctx.fillRect(8,8,240,26);ctx.fillStyle='#f2d9a1';ctx.font='bold 13px monospace';ctx.fillText(z.name,16,25);if(s.hasMap){ctx.fillStyle='#101b2a';ctx.fillRect(460,10,170,44);ctx.fillStyle='#bcd0e8';ctx.font='11px monospace';ctx.fillText('FIELD MAP  ·  '+s.coins+' COINS',468,26);ctx.fillText('SEALS '+(s.quests.well?'1':'0')+'/2',468,42)}}
-function updateHud(){if(!$('health'))return;$('health').textContent='♥ '.repeat(s.hp).trim()+' '+ '♡ '.repeat(Math.max(0,s.maxHp-s.hp)).trim();$('objective').textContent=objective();$('tool').textContent=(s.hasSword?'Sword':'Survey chain')+' · '+s.coins+' coins'}
-function objective(){if(!s.quests.stakes)return'Quest: Find both survey stakes';if(!s.quests.town)return'Quest: Ask the townsfolk';if(!s.hasSword)return'Quest: Recover the lost freight sword';if(!s.quests.rail)return'Quest: Investigate the railhead';if(!s.quests.shrine)return'Quest: Find the ridge shrine';if(!s.hasShard)return'Quest: Explore the Star-Well';if(!s.quests.well)return'Quest: Awaken the stone engine';if(!s.hasKey)return'Quest: Find a brass key';if(!s.flags.doorOpen)return'Quest: Unlock the canyon door';if(!s.flags.bossDefeated)return'Quest: Defeat the Star Warden';if(!s.gameWon)return'Quest: Reach the way home';return'Adventure complete — thank you for playing!'}
-function dialog(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.remove('hidden')}
-function closeDialog(){$('modal').classList.add('hidden')}
-function journal(){dialog('Field Journal',`<h3>Current objective</h3><p>${objective()}</p><h3>Survey notes</h3><ul>${s.notes.map(n=>'<li>'+n+'</li>').join('')}</ul><h3>Equipment</h3><ul><li>Survey chain: ${s.hasChain?'Owned':'Missing'}</li><li>Frontier sword: ${s.hasSword?'Owned':'Not found'}</li><li>Star shard: ${s.hasShard?'Recovered':'Not found'}</li><li>Brass key: ${s.hasKey?'Owned':'Not found'}</li><li>Map and compass: ${s.hasMap?'Owned':'Not found'}</li></ul><p><small>Your progress saves automatically on this device.</small></p>`)}
-function inventory(){dialog('Satchel & Equipment',`<div class="inventory-grid"><div class="item">🗡️<b>${s.hasSword?'Frontier Sword':'No Sword'}</b><small>${s.hasSword?'Press USE TOOL to attack':'Find the freight chest'}</small></div><div class="item">🧭<b>${s.hasCompass?'Brass Compass':'Compass'}</b><small>${s.hasCompass?'Points toward the hidden route':'Seek the ridge shrine'}</small></div><div class="item">🔹<b>${s.hasShard?'Star Shard':'Star Shard'}</b><small>${s.hasShard?'A strange power hums within':'Hidden below the well'}</small></div><div class="item">🗝️<b>${s.hasKey?'Brass Key':'Brass Key'}</b><small>${s.hasKey?'Opens the canyon door':'Awaken the stone engine'}</small></div></div><p>Coins: <b>${s.coins}</b> · Hearts: <b>${s.hp}/${s.maxHp}</b></p>`)}
-function ending(){dialog('The Well Beyond the Stars',`<p>The Star Warden collapses into a field of tiny blue lights. The impossible sky folds inward, and the prairie returns to silence.</p><p>At dawn, your survey map shows a new line running beneath the Laramie Plains—a road that is not a road, leading somewhere beyond the stars. You have no proof that anyone would believe. Only your field book, the shard, and the memory of three notes.</p><p>The railroad will arrive. Laramie will grow. History will record its own remarkable firsts. But your map will always carry one secret no instrument can explain.</p><h3>Chapter One: The Star-Well — Complete</h3><p>Thank you for playing. Your adventure is saved; you can keep exploring.</p><button id="endExplore">Return to the plains</button>`);setTimeout(()=>{const b=$('endExplore');if(b)b.onclick=()=>{closeDialog();s.map='camp';s.x=2.5;s.y=5.5;save()}},0)}
-$('closeModal').onclick=closeDialog;$('journalBtn').onclick=journal;$('bagBtn').onclick=inventory;$('helpBtn').onclick=()=>dialog('How to Play',`<p>Explore the frontier, speak to townsfolk, find the sword, and uncover what lies below the Star-Well.</p><ul><li><b>Move:</b> touch pad, arrow keys, or WASD.</li><li><b>Interact:</b> button, Space, or Enter near a person or object.</li><li><b>Use Tool:</b> button or X. Once you find the sword, this attacks.</li><li><b>Journal:</b> J or the Journal button.</li><li><b>Satchel:</b> I or the Satchel button.</li><li><b>Travel:</b> look for gold-framed trail openings marked TOWN, RIDGE, or EXIT at the map edges. Walk right up to the opening; crossing it changes areas.</li></ul><p>Tip: enemies chase you. Attack while facing them and keep moving. Treasure chests can contain equipment, coins, keys, or extra hearts.</p><p><small>Historical events inspire the setting; the Star-Well and its supernatural plot are fiction.</small></p>`);
-$('interactBtn').onclick=interact;$('toolBtn').onclick=useTool;$('journalBtn').onclick=journal;
-document.querySelectorAll('[data-dir]').forEach(b=>{const d=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();touch[d]=true;b.setPointerCapture?.(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>touch[d]=false))});
-window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if((e.key===' '||e.key==='Enter')&&!e.repeat)interact();if(e.key.toLowerCase()==='x'&&!e.repeat)useTool();if(e.key.toLowerCase()==='j'&&!e.repeat)journal();if(e.key.toLowerCase()==='i'&&!e.repeat)inventory()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-$('resetBtn').onclick=()=>dialog('Start a new adventure?','<p>This erases the saved game on this device and begins again at the survey camp.</p><button id="confirmReset">Start over</button>');
-$('modalBody').addEventListener('click',e=>{if(e.target.id==='confirmReset'){localStorage.removeItem('laramieWellFullSave');s=fresh();save();closeDialog();say('A new survey begins.')} });
-canvas.addEventListener('pointerdown',e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H,dx=x-s.x*T,dy=y-s.y*T;if(Math.abs(dx)>28||Math.abs(dy)>28){touch[Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up')]=true;setTimeout(()=>Object.keys(touch).forEach(k=>touch[k]=false),230)}});
-function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;attackCd=Math.max(0,attackCd-dt);invuln=Math.max(0,invuln-dt);interactCd=Math.max(0,interactCd-dt);move(dt);particles=particles.filter(p=>p.life>0);particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt});draw();updateHud();requestAnimationFrame(frame)}
-if(!s.notes.length)note('1867: You arrive on the Laramie Plains with a brass survey chain and a blank field book.');updateHud();requestAnimationFrame(frame);
+  'use strict';
+
+  // ---------- Canvas & constants ----------
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const W = 640, H = 400, T = 32; // tile size
+  const COLS = 20, ROWS = 12;
+
+  // ---------- Audio system (Web Audio) ----------
+  let audioCtx = null;
+  let masterGain, musicGain, sfxGain;
+  let ambientNodes = [];
+  let musicPlaying = false;
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.7;
+    masterGain.connect(audioCtx.destination);
+
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = 0.28;
+    musicGain.connect(masterGain);
+
+    sfxGain = audioCtx.createGain();
+    sfxGain.gain.value = 0.55;
+    sfxGain.connect(masterGain);
+  }
+
+  function resumeAudio() {
+    if (!audioCtx) initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  // Simple noise for wind / ambience
+  function createNoiseBuffer(duration = 2) {
+    const rate = audioCtx.sampleRate;
+    const len = rate * duration;
+    const buf = audioCtx.createBuffer(1, len, rate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+    return buf;
+  }
+
+  function startAmbient() {
+    if (!audioCtx || ambientNodes.length) return;
+    const noise = createNoiseBuffer(3);
+    const src = audioCtx.createBufferSource();
+    src.buffer = noise;
+    src.loop = true;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 420;
+    filter.Q.value = 0.6;
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.07;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    src.start();
+    ambientNodes = [src, filter, gain];
+
+    // Distant soft wind modulation
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.08;
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 80;
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start();
+    ambientNodes.push(lfo, lfoGain);
+  }
+
+  // Procedural SFX
+  function playTone(freq, type, dur, vol = 0.3, slide = 0) {
+    if (!audioCtx) return;
+    resumeAudio();
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), audioCtx.currentTime + dur);
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(g);
+    g.connect(sfxGain);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur + 0.05);
+  }
+
+  function playNoise(dur, vol = 0.2, filterFreq = 800) {
+    if (!audioCtx) return;
+    resumeAudio();
+    const src = audioCtx.createBufferSource();
+    src.buffer = createNoiseBuffer(dur + 0.1);
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = filterFreq;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(sfxGain);
+    src.start();
+    src.stop(audioCtx.currentTime + dur + 0.05);
+  }
+
+  const SFX = {
+    step: () => playNoise(0.06, 0.12, 600 + Math.random() * 200),
+    interact: () => { playTone(520, 'triangle', 0.08, 0.25); playTone(780, 'sine', 0.12, 0.15); },
+    collect: () => {
+      playTone(660, 'sine', 0.1, 0.3);
+      setTimeout(() => playTone(880, 'sine', 0.15, 0.25), 60);
+      setTimeout(() => playTone(1100, 'triangle', 0.2, 0.2), 130);
+    },
+    stake: () => {
+      playTone(440, 'square', 0.12, 0.2);
+      setTimeout(() => playTone(554, 'square', 0.12, 0.18), 90);
+      setTimeout(() => playTone(659, 'square', 0.25, 0.22), 180);
+    },
+    chest: () => {
+      playTone(200, 'sawtooth', 0.15, 0.15, 80);
+      setTimeout(() => playTone(400, 'triangle', 0.2, 0.2), 100);
+    },
+    hurt: () => { playTone(180, 'sawtooth', 0.18, 0.3, -60); playNoise(0.15, 0.15, 300); },
+    swing: () => playNoise(0.1, 0.18, 1200),
+    ui: () => playTone(700, 'sine', 0.05, 0.12),
+    door: () => { playTone(150, 'triangle', 0.2, 0.2, 40); playNoise(0.15, 0.1, 400); },
+    well: () => {
+      playTone(220, 'sine', 0.4, 0.25);
+      setTimeout(() => playTone(277, 'sine', 0.4, 0.22), 200);
+      setTimeout(() => playTone(330, 'sine', 0.6, 0.2), 420);
+    },
+    success: () => {
+      [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.25, 0.22), i * 90));
+    }
+  };
+
+  // Simple looping ambient music (pentatonic prairie feel)
+  let musicTimer = null;
+  function startMusic() {
+    if (!audioCtx || musicPlaying) return;
+    musicPlaying = true;
+    const scale = [196, 220, 247, 294, 330, 392, 440]; // G major-ish low
+    let idx = 0;
+    function note() {
+      if (!musicPlaying) return;
+      const f = scale[Math.floor(Math.random() * scale.length)];
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0.07, audioCtx.currentTime + 0.4);
+      g.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 2.8);
+      osc.connect(g);
+      g.connect(musicGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 3);
+      musicTimer = setTimeout(note, 1800 + Math.random() * 1400);
+    }
+    note();
+  }
+
+  // ---------- Game state ----------
+  const SAVE_KEY = 'laramieEchoesSave_v1';
+
+  function fresh() {
+    return {
+      x: 2.5, y: 5.5,
+      zone: 'camp',
+      hp: 5, maxHp: 5,
+      coins: 0,
+      stakes: { stakeA: false, stakeB: false },
+      quests: { stakes: false, shrine: false, well: false },
+      hasSword: false,
+      hasKey: false,
+      hasMap: false,
+      hasCompass: false,
+      potion: 0,
+      notes: [],
+      openedChests: {},
+      flags: {},
+      facing: 'down',
+      anim: 0
+    };
+  }
+
+  let s = load() || fresh();
+  let particles = [];
+  let attackCd = 0, invuln = 0, interactCd = 0;
+  let keys = {}, touch = { up: false, down: false, left: false, right: false };
+  let last = 0;
+  let camX = 0, camY = 0;
+  let timeOfDay = 0.35; // 0–1, morning-ish start
+  let footTimer = 0;
+  let toastTimer = 0;
+
+  function save() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  // ---------- Zones (expanded & polished) ----------
+  const zones = {
+    camp: {
+      name: 'Survey Camp',
+      biome: 'prairie',
+      start: [2.5, 5.5],
+      tiles: [
+        '####################',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '####################'
+      ],
+      objects: [
+        { x: 5, y: 3, k: 'sign', id: 'campSign', label: 'Survey Camp' },
+        { x: 9, y: 5, k: 'stake', id: 'stakeA' },
+        { x: 14, y: 7, k: 'stake', id: 'stakeB' },
+        { x: 17, y: 3, k: 'well', id: 'well' },
+        { x: 3, y: 8, k: 'npc', id: 'mara' },
+        { x: 10, y: 2, k: 'rock', id: 'strangeRock' },
+        { x: 7, y: 7, k: 'chest', id: 'chestCamp', item: 'potion' },
+        { x: 15, y: 9, k: 'tent', id: 'tent1' },
+        { x: 4, y: 4, k: 'campfire', id: 'fire' }
+      ],
+      links: [
+        { x: 19, y: 5, to: 'town', tx: 1, ty: 5 },
+        { x: 11, y: 1, to: 'ridge', tx: 10, ty: 10 }
+      ]
+    },
+    town: {
+      name: 'Laramie Tent Town',
+      biome: 'town',
+      start: [2.5, 5.5],
+      tiles: [
+        '####################',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggwwggggggwwggggg#',
+        '#gggwwggggggwwggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#ggggwwgggggggggggg#',
+        '#ggggwwgggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '####################'
+      ],
+      objects: [
+        { x: 4, y: 3, k: 'building', label: 'General Store' },
+        { x: 12, y: 3, k: 'building', label: 'Survey Office' },
+        { x: 7, y: 8, k: 'npc', id: 'louisa' },
+        { x: 15, y: 7, k: 'npc', id: 'deputy' },
+        { x: 16, y: 9, k: 'chest', id: 'townChest', item: 'coins' },
+        { x: 3, y: 9, k: 'sign', label: 'Town notice board' }
+      ],
+      links: [
+        { x: 0, y: 5, to: 'camp', tx: 18, ty: 5 },
+        { x: 19, y: 5, to: 'railhead', tx: 1, ty: 5 }
+      ]
+    },
+    railhead: {
+      name: 'End of the Rails',
+      biome: 'town',
+      start: [2.5, 5.5],
+      tiles: [
+        '####################',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#ggwwggggggggggwwgg#',
+        '#ggwwggggggggggwwgg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '#ggggggggwwgggggggg#',
+        '#ggggggggwwgggggggg#',
+        '#gggggggggggggggggg#',
+        '#gggggggggggggggggg#',
+        '####################'
+      ],
+      objects: [
+        { x: 4, y: 3, k: 'building', label: 'Freight Office' },
+        { x: 9, y: 7, k: 'npc', id: 'engineer' },
+        { x: 15, y: 8, k: 'enemy', id: 'ruffian1', hp: 2 },
+        { x: 16, y: 4, k: 'chest', id: 'railChest', item: 'sword' },
+        { x: 11, y: 2, k: 'sign', label: 'Tracks end here' }
+      ],
+      links: [
+        { x: 0, y: 5, to: 'town', tx: 18, ty: 5 },
+        { x: 10, y: 11, to: 'ridge', tx: 15, ty: 1 }
+      ]
+    },
+    ridge: {
+      name: 'The Wind-Carved Ridge',
+      biome: 'ridge',
+      start: [10.5, 10.5],
+      tiles: [
+        '####################',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '#rrrrrrrrrrrrrrrrrr#',
+        '####################'
+      ],
+      objects: [
+        { x: 10, y: 5, k: 'shrine', id: 'shrine' },
+        { x: 5, y: 8, k: 'enemy', id: 'coyote1', hp: 1 },
+        { x: 14, y: 3, k: 'enemy', id: 'coyote2', hp: 1 },
+        { x: 8, y: 2, k: 'chest', id: 'ridgeChest', item: 'key' },
+        { x: 16, y: 9, k: 'sign', label: 'La Ramée Canyon ahead' }
+      ],
+      links: [
+        { x: 10, y: 11, to: 'camp', tx: 11, ty: 2 },
+        { x: 15, y: 0, to: 'railhead', tx: 10, ty: 10 },
+        { x: 0, y: 6, to: 'canyon', tx: 18, ty: 6 }
+      ]
+    },
+    canyon: {
+      name: 'La Ramée Canyon',
+      biome: 'canyon',
+      start: [18.5, 6.5],
+      tiles: [
+        '####################',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '#cccccccccccccccccc#',
+        '####################'
+      ],
+      objects: [
+        { x: 10, y: 5, k: 'cave', id: 'caveDoor' },
+        { x: 6, y: 8, k: 'enemy', id: 'bandit1', hp: 3 },
+        { x: 14, y: 3, k: 'chest', id: 'canyonChest', item: 'coins' },
+        { x: 4, y: 4, k: 'sign', label: 'Understar Gate' }
+      ],
+      links: [
+        { x: 19, y: 6, to: 'ridge', tx: 1, ty: 6 }
+      ]
+    }
+  };
+
+  // ---------- NPCs & dialog ----------
+  const NPCS = {
+    mara: {
+      name: 'Mara – Surveyor',
+      lines: [
+        'You made it. The Union Pacific is still a day behind.',
+        'Two brass stakes went missing in the night. Find them both.',
+        'The old well on the east side… the chain trembles near it. Strange.'
+      ]
+    },
+    louisa: {
+      name: 'Louisa – Storekeeper',
+      lines: [
+        'Canvas, beans, and bad coffee. That is all I have until the next train.',
+        'Heard the surveyors lost their stakes. Bad luck on these plains.',
+        'Keep your powder dry and your eyes open. The ridge has coyotes.'
+      ]
+    },
+    deputy: {
+      name: 'Deputy Harker',
+      lines: [
+        'Quiet night so far. Prefer it that way.',
+        'Ruffians have been spotted near the railhead. Watch yourself.',
+        'If you find anything that does not belong to this century, report it.'
+      ]
+    },
+    engineer: {
+      name: 'Engineer Crowe',
+      lines: [
+        'Tracks end here for now. We push west at first light.',
+        'Some of the men swear they heard singing from the canyon.',
+        'There is a chest by the freight office. Not mine. Not asking.'
+      ]
+    }
+  };
+
+  // ---------- Helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function say(msg, dur = 2200) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+  }
+  function note(txt) {
+    if (!s.notes.includes(txt)) {
+      s.notes.unshift(txt);
+      if (s.notes.length > 12) s.notes.pop();
+      save();
+    }
+  }
+  function dialog(title, body) {
+    SFX.ui();
+    $('modalTitle').textContent = title;
+    $('modalBody').innerHTML = body;
+    $('modal').classList.add('show');
+  }
+  function closeDialog() {
+    $('modal').classList.remove('show');
+  }
+  function near(o, dist = 1.15) {
+    return Math.abs(s.x - (o.x + 0.5)) < dist && Math.abs(s.y - (o.y + 0.5)) < dist;
+  }
+  function objAlive(o) {
+    if (o.k === 'enemy' && (o.hp || 0) <= 0) return false;
+    if (o.k === 'chest' && s.openedChests[o.id]) return false;
+    return true;
+  }
+  function currentZone() { return zones[s.zone]; }
+
+  // ---------- Particles ----------
+  function spawnParticle(x, y, opts = {}) {
+    particles.push({
+      x, y,
+      vx: opts.vx || (Math.random() - 0.5) * 40,
+      vy: opts.vy || (Math.random() - 0.5) * 30 - 20,
+      life: opts.life || 0.6 + Math.random() * 0.4,
+      max: opts.life || 0.8,
+      color: opts.color || '#c8b080',
+      size: opts.size || 2 + Math.random() * 2
+    });
+  }
+  function burst(x, y, n = 8, color) {
+    for (let i = 0; i < n; i++) spawnParticle(x, y, { color, life: 0.5 + Math.random() * 0.5 });
+  }
+
+  // ---------- Movement & combat ----------
+  function solidAt(tx, ty) {
+    const z = currentZone();
+    if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true;
+    const ch = z.tiles[ty][tx];
+    return ch === '#';
+  }
+
+  function move(dt) {
+    let dx = 0, dy = 0;
+    if (keys['arrowup'] || keys['w'] || touch.up) dy -= 1;
+    if (keys['arrowdown'] || keys['s'] || touch.down) dy += 1;
+    if (keys['arrowleft'] || keys['a'] || touch.left) dx -= 1;
+    if (keys['arrowright'] || keys['d'] || touch.right) dx += 1;
+
+    if (dx || dy) {
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      dx /= len; dy /= len;
+      if (Math.abs(dx) > Math.abs(dy)) s.facing = dx > 0 ? 'right' : 'left';
+      else s.facing = dy > 0 ? 'down' : 'up';
+
+      const speed = 3.6;
+      const nx = s.x + dx * speed * dt;
+      const ny = s.y + dy * speed * dt;
+
+      // Axis separated collision
+      if (!solidAt(Math.floor(nx), Math.floor(s.y)) && !solidAt(Math.floor(nx + 0.4), Math.floor(s.y)) &&
+          !solidAt(Math.floor(nx), Math.floor(s.y + 0.4)) && !solidAt(Math.floor(nx + 0.4), Math.floor(s.y + 0.4))) {
+        s.x = nx;
+      }
+      if (!solidAt(Math.floor(s.x), Math.floor(ny)) && !solidAt(Math.floor(s.x + 0.4), Math.floor(ny)) &&
+          !solidAt(Math.floor(s.x), Math.floor(ny + 0.4)) && !solidAt(Math.floor(s.x + 0.4), Math.floor(ny + 0.4))) {
+        s.y = ny;
+      }
+
+      s.anim += dt * 8;
+      footTimer -= dt;
+      if (footTimer <= 0) {
+        SFX.step();
+        footTimer = 0.28;
+        // dust
+        if (Math.random() < 0.4) spawnParticle(s.x * T + 16, s.y * T + 28, { color: '#a09060', size: 1.5, life: 0.4 });
+      }
+
+      // Zone links
+      const z = currentZone();
+      for (const link of z.links) {
+        if (Math.abs(s.x - link.x) < 0.7 && Math.abs(s.y - link.y) < 0.7) {
+          SFX.door();
+          s.zone = link.to;
+          s.x = link.tx + 0.5;
+          s.y = link.ty + 0.5;
+          say(`Entering ${zones[s.zone].name}`);
+          save();
+          burst(s.x * T, s.y * T, 6, '#d4a84b');
+          break;
+        }
+      }
+    } else {
+      s.anim = 0;
+    }
+
+    // Enemies simple chase
+    const z = currentZone();
+    for (const o of z.objects) {
+      if (o.k !== 'enemy' || !objAlive(o)) continue;
+      const dist = Math.hypot(s.x - (o.x + 0.5), s.y - (o.y + 0.5));
+      if (dist < 5 && dist > 0.6) {
+        const ang = Math.atan2(s.y - (o.y + 0.5), s.x - (o.x + 0.5));
+        o.x += Math.cos(ang) * 1.4 * dt;
+        o.y += Math.sin(ang) * 1.4 * dt;
+      }
+      if (dist < 0.7 && invuln <= 0) {
+        s.hp = Math.max(0, s.hp - 1);
+        invuln = 1.1;
+        SFX.hurt();
+        burst(s.x * T + 16, s.y * T + 16, 10, '#c45c4a');
+        say('You take a hit!');
+        if (s.hp <= 0) {
+          say('You collapse… waking back at camp.');
+          s.hp = s.maxHp;
+          s.zone = 'camp';
+          s.x = 2.5; s.y = 5.5;
+          save();
+        }
+      }
+    }
+  }
+
+  function interact() {
+    if (interactCd > 0) return;
+    interactCd = 0.35;
+    resumeAudio();
+    SFX.interact();
+    const z = currentZone();
+    const o = z.objects.find(obj => near(obj) && objAlive(obj));
+    if (!o) {
+      say('Nothing close enough to examine.');
+      return;
+    }
+    switch (o.k) {
+      case 'stake':
+        if (!s.stakes[o.id]) {
+          s.stakes[o.id] = true;
+          note('A brass survey stake bears coordinates that do not match the stars.');
+          SFX.stake();
+          burst(o.x * T + 16, o.y * T + 16, 12, '#d4a84b');
+          say('Survey stake collected!');
+          if (s.stakes.stakeA && s.stakes.stakeB && !s.quests.stakes) {
+            s.quests.stakes = true;
+            note('Both survey stakes align to a point beneath the old well.');
+            SFX.success();
+            say('Quest updated: investigate the old well.');
+          }
+        } else say('The stake is already recorded.');
+        save();
+        break;
+      case 'well':
+        if (!s.quests.stakes) {
+          dialog('The Old Well', `<p>The rim is etched with strange markings. Your survey chain trembles, but you need the two brass stakes to calculate its true position.</p>`);
+        } else if (!s.quests.well) {
+          s.quests.well = true;
+          SFX.well();
+          note('The Star-Well answered the measurements. A stairway of impossible stone opened.');
+          dialog('The Star-Well', `<p>The well answers your measurements with three clear tones. A narrow stairway appears in the dark. The old stories might be nonsense—but the stone is warm to the touch.</p><p><em>You have uncovered the first secret of the plains.</em></p>`);
+          save();
+        } else {
+          dialog('The Star-Well', `<p>The stair still descends. Whatever waits below remembers Jacques La Ramée.</p>`);
+        }
+        break;
+      case 'npc':
+        talk(o.id);
+        break;
+      case 'sign':
+        dialog(o.label || 'Sign', `<p>The weathered board reads: “${o.label}.” Your field book records the route. The wind carries the distant sound of a train that has not yet arrived.</p>`);
+        break;
+      case 'building':
+        dialog(o.label, `<p>The building smells of coal smoke, wet canvas, and fresh-cut timber. It is locked for the night.</p>`);
+        break;
+      case 'rock':
+        dialog('A Strange Stone', `<p>The stone is threaded with a blue mineral. Your compass needle points straight down. You mark the spot in your notebook.</p>`);
+        note('A dark rock near camp contains a blue mineral that makes the compass point downward.');
+        break;
+      case 'chest':
+        openChest(o);
+        break;
+      case 'shrine':
+        if (!s.quests.stakes) {
+          dialog('Wind Shrine', `<p>A stone marker stands in a ring of wind-carved rocks. It seems to be waiting for a surveyor who can read the land.</p>`);
+        } else if (!s.quests.shrine) {
+          s.quests.shrine = true;
+          s.hasMap = true;
+          s.hasCompass = true;
+          SFX.success();
+          note('The ridge shrine grants a map and compass. The old survey lines reveal a path to La Ramée Canyon.');
+          dialog('Wind Shrine', `<p>The survey stakes align with the ridge. A hidden compartment opens: inside are an old map and compass. Canyon trails now appear on your map.</p>`);
+          save();
+        } else say('The shrine is quiet. The map and compass are yours.');
+        break;
+      case 'cave':
+        if (!s.hasKey) {
+          dialog('Sealed Stone Door', `<p>A door is cut into the canyon wall. The lock is made of brass, not iron. You need a key.</p>`);
+        } else if (!s.flags.doorOpen) {
+          s.flags.doorOpen = true;
+          SFX.door();
+          SFX.success();
+          note('The Understar Door opened with a sound like a bell.');
+          dialog('The Understar Door', `<p>Your brass key turns with a sound like a bell. Beyond the door, a stair descends toward an impossible sky. The survey is far from over.</p>`);
+          save();
+        } else {
+          dialog('The Understar Door', `<p>The passage remains open. Whatever lies beneath the plains is waiting.</p>`);
+        }
+        break;
+      case 'campfire':
+        say('The fire crackles. Warmth against the high-plains wind.');
+        burst(o.x * T + 16, o.y * T + 8, 5, '#ff8844');
+        break;
+      case 'tent':
+        say('A surveyor’s tent. Canvas snaps in the breeze.');
+        break;
+      default:
+        say('Interesting, but nothing more.');
+    }
+  }
+
+  function talk(id) {
+    const n = NPCS[id];
+    if (!n) return;
+    const line = n.lines[Math.floor(Math.random() * n.lines.length)];
+    dialog(n.name, `<p>${line}</p>`);
+  }
+
+  function openChest(o) {
+    if (s.openedChests[o.id]) return;
+    s.openedChests[o.id] = true;
+    SFX.chest();
+    burst(o.x * T + 16, o.y * T + 16, 14, '#d4a84b');
+    let msg = 'You open the chest… ';
+    switch (o.item) {
+      case 'potion':
+        s.potion++;
+        s.hp = Math.min(s.maxHp, s.hp + 2);
+        msg += 'a healing draught. Health restored.';
+        break;
+      case 'coins':
+        s.coins += 15 + Math.floor(Math.random() * 10);
+        msg += `a purse of ${s.coins} coins total.`;
+        break;
+      case 'sword':
+        s.hasSword = true;
+        msg += 'a fine cavalry saber! Use Tool now attacks.';
+        note('You found a cavalry saber at the railhead.');
+        break;
+      case 'key':
+        s.hasKey = true;
+        msg += 'a heavy brass key.';
+        note('A brass key recovered from the ridge.');
+        break;
+      default:
+        s.coins += 5;
+        msg += 'a few coins.';
+    }
+    say(msg);
+    save();
+  }
+
+  function useTool() {
+    if (attackCd > 0) return;
+    attackCd = 0.4;
+    resumeAudio();
+    if (s.hasSword) {
+      SFX.swing();
+      // Attack facing direction
+      let ax = s.x, ay = s.y;
+      if (s.facing === 'right') ax += 0.9;
+      else if (s.facing === 'left') ax -= 0.9;
+      else if (s.facing === 'down') ay += 0.9;
+      else ay -= 0.9;
+      burst(ax * T + 16, ay * T + 16, 6, '#e8e0d0');
+      const z = currentZone();
+      for (const o of z.objects) {
+        if (o.k === 'enemy' && objAlive(o) && Math.hypot(ax - (o.x + 0.5), ay - (o.y + 0.5)) < 1.1) {
+          o.hp = (o.hp || 1) - 1;
+          SFX.hurt();
+          burst(o.x * T + 16, o.y * T + 16, 8, '#c45c4a');
+          if (o.hp <= 0) {
+            say('Enemy defeated!');
+            s.coins += 3;
+            save();
+          }
+        }
+      }
+    } else {
+      SFX.interact();
+      say('You swing the survey chain. It is not a weapon… yet.');
+    }
+  }
+
+  // ---------- Drawing (better graphics) ----------
+  function drawTile(tx, ty, ch, biome) {
+    const px = tx * T - camX;
+    const py = ty * T - camY;
+    if (px < -T || py < -T || px > W || py > H) return;
+
+    // Base colors by biome
+    let base, detail;
+    if (ch === '#') {
+      // wall / mountain edge
+      ctx.fillStyle = '#2a3344';
+      ctx.fillRect(px, py, T, T);
+      ctx.fillStyle = '#3a4558';
+      ctx.fillRect(px + 2, py + 2, T - 4, T - 4);
+      return;
+    }
+    if (biome === 'prairie' || biome === 'town') {
+      base = (tx + ty) % 2 === 0 ? '#3d6b3a' : '#356235';
+      detail = '#4a7a45';
+    } else if (biome === 'ridge') {
+      base = (tx + ty) % 2 === 0 ? '#5a5040' : '#4e4638';
+      detail = '#6a6050';
+    } else { // canyon
+      base = (tx + ty) % 2 === 0 ? '#6a4a38' : '#5e4232';
+      detail = '#7a5a48';
+    }
+
+    ctx.fillStyle = base;
+    ctx.fillRect(px, py, T, T);
+
+    // Subtle grass / rock detail
+    ctx.fillStyle = detail;
+    if (biome === 'prairie' || biome === 'town') {
+      for (let i = 0; i < 4; i++) {
+        const gx = px + 4 + (i * 7 + tx * 3) % 24;
+        const gy = py + 8 + (i * 5 + ty * 2) % 20;
+        ctx.fillRect(gx, gy, 2, 3);
+      }
+    } else {
+      ctx.fillRect(px + 6, py + 10, 4, 2);
+      ctx.fillRect(px + 18, py + 18, 5, 2);
+    }
+
+    // Soft edge shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(px, py + T - 3, T, 3);
+  }
+
+  function drawObject(o, t) {
+    if (!objAlive(o)) return;
+    const px = o.x * T - camX;
+    const py = o.y * T - camY;
+    if (px < -40 || py < -40 || px > W + 20 || py > H + 20) return;
+
+    const bob = Math.sin(t * 3 + o.x) * 1.5;
+
+    switch (o.k) {
+      case 'stake': {
+        // Brass survey stake
+        ctx.fillStyle = s.stakes[o.id] ? '#4a5a4a' : '#c9a227';
+        ctx.fillRect(px + 14, py + 8 + bob, 4, 20);
+        ctx.fillStyle = '#e8d080';
+        ctx.fillRect(px + 12, py + 6 + bob, 8, 5);
+        if (!s.stakes[o.id]) {
+          ctx.fillStyle = 'rgba(212,168,75,0.35)';
+          ctx.beginPath();
+          ctx.arc(px + 16, py + 12 + bob, 10 + Math.sin(t * 4) * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'well': {
+        ctx.fillStyle = '#3a3a42';
+        ctx.beginPath();
+        ctx.ellipse(px + 16, py + 22, 14, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2a2a32';
+        ctx.beginPath();
+        ctx.ellipse(px + 16, py + 20, 10, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // rim highlight
+        ctx.strokeStyle = '#5a5a6a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(px + 16, py + 18, 12, 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        if (s.quests.stakes) {
+          ctx.fillStyle = `rgba(100,180,255,${0.15 + Math.sin(t * 2) * 0.1})`;
+          ctx.beginPath();
+          ctx.ellipse(px + 16, py + 16, 8, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'npc': {
+        // Simple person
+        ctx.fillStyle = '#2a3a4a';
+        ctx.fillRect(px + 11, py + 14, 10, 12); // body
+        ctx.fillStyle = '#e0c8a0';
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 10, 6, 0, Math.PI * 2);
+        ctx.fill(); // head
+        ctx.fillStyle = '#3d5a4a';
+        ctx.fillRect(px + 9, py + 15, 4, 8); // arm
+        ctx.fillRect(px + 19, py + 15, 4, 8);
+        break;
+      }
+      case 'chest': {
+        ctx.fillStyle = '#6a4a28';
+        ctx.fillRect(px + 6, py + 12, 20, 14);
+        ctx.fillStyle = '#8a6a38';
+        ctx.fillRect(px + 6, py + 12, 20, 5);
+        ctx.fillStyle = '#d4a84b';
+        ctx.fillRect(px + 14, py + 16, 4, 6);
+        break;
+      }
+      case 'sign': {
+        ctx.fillStyle = '#5a4030';
+        ctx.fillRect(px + 14, py + 10, 4, 18);
+        ctx.fillStyle = '#8a6a40';
+        ctx.fillRect(px + 6, py + 6, 20, 10);
+        break;
+      }
+      case 'building': {
+        ctx.fillStyle = '#4a3a2a';
+        ctx.fillRect(px + 2, py + 8, 28, 22);
+        ctx.fillStyle = '#3a2a1a';
+        ctx.beginPath();
+        ctx.moveTo(px, py + 10);
+        ctx.lineTo(px + 16, py + 2);
+        ctx.lineTo(px + 32, py + 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1a2030';
+        ctx.fillRect(px + 12, py + 18, 8, 12); // door
+        break;
+      }
+      case 'rock': {
+        ctx.fillStyle = '#4a4a58';
+        ctx.beginPath();
+        ctx.moveTo(px + 6, py + 24);
+        ctx.lineTo(px + 10, py + 10);
+        ctx.lineTo(px + 22, py + 8);
+        ctx.lineTo(px + 26, py + 22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#3a6a9a';
+        ctx.fillRect(px + 14, py + 14, 4, 4);
+        break;
+      }
+      case 'enemy': {
+        const flash = invuln > 0 && Math.floor(t * 10) % 2 ? 0.5 : 1;
+        ctx.globalAlpha = flash;
+        ctx.fillStyle = o.id.startsWith('coyote') ? '#8a6a40' : '#5a3a3a';
+        ctx.fillRect(px + 8, py + 12, 16, 14);
+        ctx.fillStyle = '#2a1a1a';
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 10, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'shrine': {
+        ctx.fillStyle = '#5a5a6a';
+        ctx.fillRect(px + 10, py + 6, 12, 22);
+        ctx.fillStyle = '#7a7a8a';
+        ctx.fillRect(px + 6, py + 4, 20, 6);
+        ctx.fillStyle = 'rgba(180,200,255,0.3)';
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 8, 6 + Math.sin(t * 2) * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case 'cave': {
+        ctx.fillStyle = '#1a1a22';
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + 28);
+        ctx.quadraticCurveTo(px + 16, py + 4, px + 28, py + 28);
+        ctx.closePath();
+        ctx.fill();
+        if (s.flags.doorOpen) {
+          ctx.fillStyle = '#2a3a5a';
+          ctx.fillRect(px + 10, py + 12, 12, 16);
+        }
+        break;
+      }
+      case 'campfire': {
+        // wood
+        ctx.fillStyle = '#4a3020';
+        ctx.fillRect(px + 10, py + 20, 12, 4);
+        // flames
+        const flicker = 0.7 + Math.sin(t * 12) * 0.3;
+        ctx.fillStyle = `rgba(255,140,40,${flicker})`;
+        ctx.beginPath();
+        ctx.moveTo(px + 16, py + 8);
+        ctx.lineTo(px + 10, py + 20);
+        ctx.lineTo(px + 22, py + 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,220,80,${flicker})`;
+        ctx.beginPath();
+        ctx.moveTo(px + 16, py + 12);
+        ctx.lineTo(px + 13, py + 20);
+        ctx.lineTo(px + 19, py + 20);
+        ctx.closePath();
+        ctx.fill();
+        if (Math.random() < 0.3) spawnParticle(px + 16, py + 10, { color: '#ff8844', vy: -30, life: 0.5 });
+        break;
+      }
+      case 'tent': {
+        ctx.fillStyle = '#6a5a40';
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + 26);
+        ctx.lineTo(px + 16, py + 6);
+        ctx.lineTo(px + 28, py + 26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#4a3a28';
+        ctx.fillRect(px + 14, py + 16, 4, 10);
+        break;
+      }
+    }
+  }
+
+  function drawPlayer(t) {
+    const px = s.x * T - camX;
+    const py = s.y * T - camY;
+    const walk = Math.sin(s.anim) * 2;
+
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(px + 16, py + 30, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // invuln flash
+    if (invuln > 0 && Math.floor(t * 12) % 2 === 0) ctx.globalAlpha = 0.4;
+
+    // body
+    ctx.fillStyle = '#2a4a6a';
+    ctx.fillRect(px + 10, py + 14 + walk * 0.3, 12, 14);
+
+    // head
+    ctx.fillStyle = '#e0c8a0';
+    ctx.beginPath();
+    ctx.arc(px + 16, py + 10 + walk * 0.2, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // hat
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(px + 8, py + 4 + walk * 0.2, 16, 4);
+    ctx.fillRect(px + 11, py + 1 + walk * 0.2, 10, 4);
+
+    // legs
+    ctx.fillStyle = '#2a2a3a';
+    const legOff = Math.sin(s.anim) * 3;
+    ctx.fillRect(px + 11, py + 26, 4, 6 + (s.facing === 'down' || s.facing === 'up' ? legOff : 0));
+    ctx.fillRect(px + 17, py + 26, 4, 6 - (s.facing === 'down' || s.facing === 'up' ? legOff : 0));
+
+    // tool / sword
+    if (s.hasSword) {
+      ctx.fillStyle = '#c0c0d0';
+      if (s.facing === 'right') {
+        ctx.fillRect(px + 22, py + 16, 12, 3);
+        ctx.fillStyle = '#8a6a30';
+        ctx.fillRect(px + 20, py + 14, 4, 7);
+      } else if (s.facing === 'left') {
+        ctx.fillRect(px - 2, py + 16, 12, 3);
+        ctx.fillStyle = '#8a6a30';
+        ctx.fillRect(px + 8, py + 14, 4, 7);
+      } else {
+        ctx.fillRect(px + 14, py + 8, 3, 10);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    const t = performance.now() / 1000;
+    timeOfDay = (timeOfDay + 0.0008) % 1;
+
+    // Camera follow with soft lerp
+    const targetCamX = s.x * T - W / 2 + 16;
+    const targetCamY = s.y * T - H / 2 + 16;
+    camX += (targetCamX - camX) * 0.12;
+    camY += (targetCamY - camY) * 0.12;
+    camX = Math.max(0, Math.min(COLS * T - W, camX));
+    camY = Math.max(0, Math.min(ROWS * T - H, camY));
+
+    // Clear
+    ctx.fillStyle = '#1a2a1a';
+    ctx.fillRect(0, 0, W, H);
+
+    const z = currentZone();
+
+    // Tiles
+    for (let ty = 0; ty < ROWS; ty++) {
+      for (let tx = 0; tx < COLS; tx++) {
+        drawTile(tx, ty, z.tiles[ty][tx], z.biome);
+      }
+    }
+
+    // Link markers (gold frames)
+    for (const link of z.links) {
+      const px = link.x * T - camX;
+      const py = link.y * T - camY;
+      ctx.strokeStyle = `rgba(212,168,75,${0.5 + Math.sin(t * 3) * 0.3})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px + 4, py + 4, T - 8, T - 8);
+      ctx.fillStyle = 'rgba(212,168,75,0.15)';
+      ctx.fillRect(px + 4, py + 4, T - 8, T - 8);
+    }
+
+    // Objects
+    const sorted = [...z.objects].sort((a, b) => a.y - b.y);
+    for (const o of sorted) drawObject(o, t);
+
+    // Player
+    drawPlayer(t);
+
+    // Particles
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - camX, p.y - camY, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    // Day/night vignette (subtle)
+    const night = Math.sin(timeOfDay * Math.PI * 2) * 0.5 + 0.5;
+    if (night > 0.6) {
+      ctx.fillStyle = `rgba(10,15,30,${(night - 0.6) * 0.35})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Zone name
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(8, 8, 160, 22);
+    ctx.fillStyle = '#d4a84b';
+    ctx.font = '12px system-ui';
+    ctx.fillText(z.name, 14, 23);
+  }
+
+  function updateHud() {
+    const hearts = '♥ '.repeat(s.hp) + '♡ '.repeat(Math.max(0, s.maxHp - s.hp));
+    $('health').textContent = hearts.trim();
+    let toolTxt = s.hasSword ? 'Saber' : 'Survey chain';
+    toolTxt += ` · ${s.coins} coins`;
+    if (s.potion) toolTxt += ` · ${s.potion} draught`;
+    $('tool').textContent = toolTxt;
+
+    let obj = 'Quest: Find both survey stakes';
+    if (s.quests.stakes && !s.quests.well) obj = 'Quest: Investigate the old well';
+    else if (s.quests.well && !s.quests.shrine) obj = 'Quest: Seek the Wind Shrine on the ridge';
+    else if (s.quests.shrine && !s.hasKey) obj = 'Quest: Find the brass key';
+    else if (s.hasKey && !s.flags.doorOpen) obj = 'Quest: Open the Understar Door';
+    else if (s.flags.doorOpen) obj = 'The survey continues beneath…';
+    $('objective').textContent = obj;
+  }
+
+  function journal() {
+    SFX.ui();
+    const notes = s.notes.length
+      ? '<ul>' + s.notes.map(n => `<li>${n}</li>`).join('') + '</ul>'
+      : '<p>Your field book is still blank.</p>';
+    dialog('Field Journal', notes);
+  }
+
+  function inventory() {
+    SFX.ui();
+    let html = '<ul>';
+    html += `<li>Coins: ${s.coins}</li>`;
+    html += `<li>Health: ${s.hp} / ${s.maxHp}</li>`;
+    if (s.hasSword) html += '<li>Cavalry saber</li>';
+    if (s.hasKey) html += '<li>Brass key</li>';
+    if (s.hasMap) html += '<li>Old survey map</li>';
+    if (s.hasCompass) html += '<li>Compass</li>';
+    if (s.potion) html += `<li>Healing draught ×${s.potion}</li>`;
+    html += `<li>Stakes: ${s.stakes.stakeA ? 'A ' : ''}${s.stakes.stakeB ? 'B' : '' || 'none'}</li>`;
+    html += '</ul>';
+    dialog('Satchel & Equipment', html);
+  }
+
+  // ---------- Input ----------
+  $('interactBtn').onclick = () => { resumeAudio(); interact(); };
+  $('toolBtn').onclick = () => { resumeAudio(); useTool(); };
+  $('journalBtn').onclick = journal;
+  $('bagBtn').onclick = inventory;
+  $('helpBtn').onclick = () => {
+    dialog('How to Play', `
+      <p>Explore the Laramie Plains of 1867. Find the two survey stakes, unlock the Star-Well, and discover what lies beneath.</p>
+      <ul>
+        <li><b>Move:</b> arrow keys, WASD, or the d-pad.</li>
+        <li><b>Interact:</b> Space, Enter, or the Interact button.</li>
+        <li><b>Use Tool:</b> X or the Use Tool button (attacks once you have the sword).</li>
+        <li><b>Journal / Satchel:</b> J / I or the buttons below.</li>
+        <li><b>Travel:</b> walk into the gold-framed openings at map edges.</li>
+      </ul>
+      <p>Tip: enemies chase you. Face them and attack. Chests hold useful gear.</p>
+      <p><small>Historical setting inspired by the real Laramie Plains; the Star-Well is pure fiction.</small></p>
+    `);
+  };
+  $('resetBtn').onclick = () => {
+    dialog('Start a new adventure?', `
+      <p>This erases the saved game on this device and begins again at the survey camp.</p>
+      <button id="confirmReset">Start over</button>
+    `);
+  };
+  $('closeModal').onclick = closeDialog;
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeDialog(); });
+  $('modalBody').addEventListener('click', e => {
+    if (e.target.id === 'confirmReset') {
+      localStorage.removeItem(SAVE_KEY);
+      s = fresh();
+      save();
+      closeDialog();
+      say('A new survey begins.');
+      SFX.success();
+    }
+  });
+
+  document.querySelectorAll('[data-dir]').forEach(b => {
+    const d = b.dataset.dir;
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      touch[d] = true;
+      b.classList.add('pressed');
+      b.setPointerCapture?.(e.pointerId);
+      resumeAudio();
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev =>
+      b.addEventListener(ev, () => { touch[d] = false; b.classList.remove('pressed'); })
+    );
+  });
+
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { resumeAudio(); interact(); }
+    if (e.key.toLowerCase() === 'x' && !e.repeat) { resumeAudio(); useTool(); }
+    if (e.key.toLowerCase() === 'j' && !e.repeat) journal();
+    if (e.key.toLowerCase() === 'i' && !e.repeat) inventory();
+  });
+  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+  // First interaction starts audio
+  window.addEventListener('pointerdown', () => {
+    resumeAudio();
+    startAmbient();
+    startMusic();
+  }, { once: true });
+
+  // ---------- Main loop ----------
+  function frame(t) {
+    const dt = Math.min(0.05, (t - last) / 1000 || 0);
+    last = t;
+    attackCd = Math.max(0, attackCd - dt);
+    invuln = Math.max(0, invuln - dt);
+    interactCd = Math.max(0, interactCd - dt);
+
+    move(dt);
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      p.vy += 40 * dt; // gravity
+    });
+
+    draw();
+    updateHud();
+    requestAnimationFrame(frame);
+  }
+
+  // Boot
+  if (!s.notes.length) {
+    note('1867: You arrive on the Laramie Plains with a brass survey chain and a blank field book.');
+  }
+  updateHud();
+  requestAnimationFrame(frame);
 })();
