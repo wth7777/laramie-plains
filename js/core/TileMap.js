@@ -38,6 +38,13 @@ export class TileMap {
     return this.data[ty][tx];
   }
 
+  /** Set tile ID at tile coordinates (tx, ty) */
+  setTile(tx, ty, value) {
+    if (tx >= 0 && ty >= 0 && tx < this.w && ty < this.h) {
+      this.data[ty][tx] = value;
+    }
+  }
+
   /** Check if tile is solid using SOLID_TILES set (provided externally) */
   isSolid(tx, ty, solidTiles) {
     const tid = this.getTile(tx, ty);

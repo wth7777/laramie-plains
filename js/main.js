@@ -17,9 +17,10 @@ let canvasCtx;
 let tileMap;
 let camera;
 let player;
-let dialogText = '';
+
+// Dialog state
 let dialogPage = 0;
-const dialogPages = [];
+let dialogPages = [];
 
 // Solid tiles (walls, obstacles) – using CHAR_TILE numbers from Sprites.js tile mapping
 const SOLID_TILES = new Set([
@@ -44,7 +45,7 @@ const SOLID_TILES = new Set([
   28,  // dcrack
   29,  // torch
   30,  // statue
-  31,  // door_open
+  // 31: door_open (left out – passable when opened)
   32,  // wfloor
   33,  // wwall
   34,  // rug
@@ -132,6 +133,13 @@ class Player {
   }
 }
 
+// Helper to show dialog
+function showDialog(pages) {
+  dialogPages = pages;
+  dialogPage = 0;
+  stateMachine.change(STATE.DIALOG);
+}
+
 // Initialize
 async function init() {
   const canvasEl = document.getElementById('game');
@@ -161,6 +169,16 @@ async function init() {
     })
   );
 
+  // Add a door in the south wall of the building (middle)
+  const doorX = 12; // between 8 and 20
+  const doorY = 14; // south wall
+  data[doorY][doorX] = 14; // hdoor (closed door)
+
+  // Add a sign north of the building (outside)
+  const signX = 12;
+  const signY = 6; // just north of building entrance
+  data[signY][signX] = 18; // sign
+
   tileMap = new TileMap(data);
   const worldPixelWidth = mapWidth * 16;
   const worldPixelHeight = mapHeight * 16;
@@ -168,14 +186,13 @@ async function init() {
   // Start player in open area north of building
   player = new Player(8 * 16, 6 * 16); // tile (8,6) pixel coords
 
-  // Dialog setup
-  dialogPages = [
+  // Initial dialog (intro)
+  showDialog([
     "LARAMIE, 1868. THE UNION PACIFIC REACHES THESE PLAINS.",
     "YOU ARRIVE AS A SURVEYOR'S APPRENTICE...",
     "BUT THE LAND REMEMBERS JACQUES LA RAMEE.",
     "FIND THE TRAPPER AT VEDAUWOO."
-  ];
-  dialogPage = 0;
+  ]);
 
   // Hide hint
   const hint = document.getElementById('hint');
@@ -207,6 +224,34 @@ async function init() {
       update: (dt) => {
         player.update(dt, tileMap);
         camera.follow(player.x + 8, player.y + 8); // center on player
+
+        // Interaction: press A to talk/open door
+        if (Input.pressed.a) {
+          // Determine tile in front of player
+          const tileSize = 16;
+          const px = Math.floor(player.x / tileSize);
+          const py = Math.floor(player.y / tileSize);
+          let tx = px, ty = py;
+          switch (player.dir) {
+            case 'up':   ty--; break;
+            case 'down': ty++; break;
+            case 'left': tx--; break;
+            case 'right':tx++; break;
+          }
+          const tileID = tileMap.getTile(tx, ty);
+          if (tileID === 14) { // closed door -> open
+            tileMap.setTile(tx, ty, 1); // change to grass (passable)
+            // Optionally play a door open sound
+          } else if (tileID === 18) { // sign
+            showDialog([
+              "Welcome to Laramie, 1868.",
+              "Surveyor's camp lies ahead.",
+              "The trapper waits at Vedauwoo."
+            ]);
+          }
+          // Add more interactable tiles as needed
+        }
+
         if (Input.pressed.start) stateMachine.change(STATE.PAUSE);
       },
     },
