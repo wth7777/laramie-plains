@@ -12,6 +12,15 @@
   <meta name="apple-mobile-web-app-title" content="Laramie Plains">
 </head>
 <body>
+  <script>
+    window.__errors = [];
+    window.__logs = [];
+    const oldLog = console.log;
+    console.log = function() { window.__logs.push(Array.from(arguments).join(' ')); oldLog.apply(console, arguments); };
+    const oldErr = console.error;
+    console.error = function() { window.__errors.push(Array.from(arguments).join(' ')); oldErr.apply(console, arguments); };
+    window.onerror = function(msg, url, line, col, error) { window.__errors.push({msg, url, line, col, error}); return false; };
+  </script>
   <div id="wrap">
     <canvas id="game" width="512" height="448"></canvas>
     <div id="hint">PRESS <b>START</b> TO BEGIN</div>
