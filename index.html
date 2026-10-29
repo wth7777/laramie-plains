@@ -36,10 +36,10 @@
   <script type="module">
 // LARAMIE: PLAINS OF THE LOST — main.js
 // Entry point, game loop, state management
-import { StateMachine } from './core/StateMachine.js';
-import { Input } from './core/Input.js';
-import { TileMap, Camera } from './core/TileMap.js';
-import { SPR } from './core/Sprites.js';
+import { StateMachine } from './js/core/StateMachine.js';
+import { Input } from './js/core/Input.js';
+import { TileMap, Camera } from './js/core/TileMap.js';
+import { SPR } from './js/core/Sprites.js';
 
 const STATE = {
   TITLE: 'title',
@@ -451,7 +451,7 @@ function renderDialog(ctx) {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 14px monospace';
   ctx.textAlign = 'left';
-  const lines = dialogPages[dialogPage] ? dialogPages[dialogPage].split('\\n') : [''];
+  const lines = dialogPages[dialogPage] ? dialogPages[dialogPage].split('\\\\n') : [''];
   let lineY = dialogBoxY + 24;
   for (const line of lines) {
     ctx.fillText(line, dialogBoxX + 24, lineY);
