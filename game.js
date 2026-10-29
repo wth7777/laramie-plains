@@ -2,6 +2,7 @@
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
+const atlas=new Image();atlas.src='sprites.png';
 const W=960,H=540,T=40,COLS=24,ROWS=13;
 const $=id=>document.getElementById(id);
 const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,attack:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0};
@@ -62,28 +63,75 @@ function signText(){const z=state.zone;if(z==='camp')return 'TRAIL BOARD\\n→ E
 function useTool(){if(!state.started||state.dialog)return;if(!state.tool){toast('No tool yet. Search the survey cache in the Star-Well.');beep(180,.1);return}state.attack=10;sfx('item');const o=nearby();if(o&&o.type==='rock'){state.coins++;toast('You chip a brass token from the mineral seam!');save();updateHud()}else toast('You swing the survey hammer. The sound echoes across the prairie.');}
 function updateHud(){$('health').textContent='♥ '.repeat(state.hp).trim()+' '+ '♡ '.repeat(3-state.hp).trim();$('coins').textContent='◇ '+state.coins;$('location').textContent=zoneInfo[state.zone].name;$('objective').textContent=!state.stake?'Find the survey stake near camp':!state.heard?'Follow the compass to the Starfall Canyon':!state.tool?'Explore the Star-Well for the survey cache':'Reach the Star-Well and uncover the voice';}
 function mapOpen(){if(!state.started)return;const list=$('map-list');list.innerHTML='';Object.entries(zoneInfo).forEach(([k,v])=>{const d=document.createElement('div');d.className='map-item'+(k===state.zone?' current':'');d.innerHTML='<b>'+v.name+'</b><small>'+(k===state.zone?'YOU ARE HERE':v.desc)+'</small>';list.appendChild(d)});$('map-card').classList.remove('hidden')}
-function drawGround(){const z=zoneInfo[state.zone];ctx.fillStyle=z.ground;ctx.fillRect(0,0,W,H);let seed=z.seed;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){let n=(x*37+y*71+seed*19)%97;let px=x*T,py=y*T;if(n<16){ctx.fillStyle=state.zone==='well'?'#536a75':state.zone==='ridge'?'#8d9272':state.zone==='canyon'?'#9d8060':'#c8b57a';ctx.fillRect(px+((n*7)%25),py+((n*11)%24),3+(n%4),2+(n%3));}if(n===22||n===55){ctx.fillStyle='#ffffff12';ctx.fillRect(px+5,py+5,20,2)}}}
+function drawGround(){
+ const z=zoneInfo[state.zone];
+ const zoneTile=state.zone==='well'?6:state.zone==='canyon'?4:state.zone==='ridge'?3:state.zone==='railhead'?7:state.zone==='town'?1:0;
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+   let tile=zoneTile;
+   // Organic terrain variation, with a central dusty path to guide the player
+   const n=(x*37+y*71+z.seed*19)%23;
+   if(state.zone==='well'&&(n===0||n===7))tile=5;
+   else if(state.zone==='ridge'&&(n===0||n===6||n===13))tile=7;
+   else if(state.zone==='canyon'&&(n===0||n===10))tile=3;
+   else if((state.zone==='camp'||state.zone==='town'||state.zone==='railhead')&&(n===0||n===9))tile=2;
+   if(Math.abs(y-6)<=1 && x>1 && x<COLS-2)tile=8+((x+y)%4);
+   if(Math.abs(x-12)<=1 && y>1 && y<ROWS-2 && (state.zone==='camp'||state.zone==='town'||state.zone==='railhead'||state.zone==='ridge'||state.zone==='canyon'))tile=8+((x+y+1)%4);
+   if(atlas.complete&&atlas.naturalWidth){ctx.drawImage(atlas,(tile%8)*32,Math.floor(tile/8)*32,32,32,x*T,y*T,T,T);}
+   else {ctx.fillStyle=z.ground;ctx.fillRect(x*T,y*T,T,T);}
+ }
+ // Add small grass tufts / pebbles on top for a layered, less repetitive world
+ for(let i=0;i<60;i++){
+   const x=((i*97+z.seed*13)%W),y=((i*61+z.seed*17)%H);
+   if(state.zone!=='well'&&((i+z.seed)%3===0)){
+     ctx.fillStyle=state.zone==='ridge'?'#d2c18b99':'#e6d09299';
+     ctx.fillRect(x,y,2,3);ctx.fillRect(x+2,y-2,2,3);
+   }else if(state.zone==='well'&&i%2===0){ctx.fillStyle='#67e6ff88';ctx.fillRect(x,y,2,2);}
+ }
+}
 function drawTrail(){const z=zoneInfo[state.zone];ctx.save();ctx.strokeStyle=state.zone==='well'?'#5bd7ec':'#d9b35d';ctx.lineWidth=4;ctx.setLineDash([8,9]);ctx.globalAlpha=.8;ctx.beginPath();ctx.moveTo(12*T+T/2,H/2);ctx.lineTo(W/2,H/2);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
  Object.values(z.exits).forEach(e=>{let x,y;if(e.side==='left'){x=0;y=6*T}else if(e.side==='right'){x=W;y=6*T}else if(e.side==='up'){x=12*T;y=0}else{x=12*T;y=H}ctx.fillStyle='#24372f';if(e.side==='left'||e.side==='right')ctx.fillRect(x===0?0:W-4,y-T/2,4,T*2);else ctx.fillRect(x-T/2,y===0?0:H-4,T,4);ctx.strokeStyle='#f6d577';ctx.lineWidth=4;ctx.beginPath();if(e.side==='left'){ctx.moveTo(0,y-T/2);ctx.lineTo(0,y+T/2)}if(e.side==='right'){ctx.moveTo(W,y-T/2);ctx.lineTo(W,y+T/2)}if(e.side==='up'){ctx.moveTo(x-T/2,0);ctx.lineTo(x+T/2,0)}if(e.side==='down'){ctx.moveTo(x-T/2,H);ctx.lineTo(x+T/2,H)}ctx.stroke();ctx.fillStyle='#152027dd';ctx.fillRect(e.side==='left'?8:e.side==='right'?W-105:e.side==='up'?x-45:x-45,e.side==='up'?8:e.side==='down'?H-29:y-12,e.side==='left'||e.side==='right'?94:90,22);ctx.fillStyle='#ffe29a';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('↗ '+e.label,e.side==='left'?55:e.side==='right'?W-58:x,e.side==='up'?24:e.side==='down'?H-13:y+4);});ctx.restore();}
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
-function drawObject(o){let x=o.x*T+T/2,y=o.y*T+T/2;ctx.save();ctx.translate(x,y);switch(o.type){
- case'tent':rect(-23,-13,46,26,'#6e4833');rect(-19,-18,38,12,'#d2b17a');rect(-7,-5,14,18,'#372d28');rect(-24,8,48,3,'#49362d');break;
- case'crate':rect(-15,-14,30,28,'#81552f');rect(-12,-11,24,22,'#b07b3f');rect(-15,-3,30,4,'#624328');rect(-3,-14,4,28,'#624328');break;
- case'stake':rect(-3,-19,6,32,'#4b3326');rect(-6,-17,12,5,'#d5bd7b');rect(-13,9,26,4,'#8a6336');break;
- case'campfire':rect(-15,9,30,5,'#473126');rect(-10,-3,20,17,'#e98b3b');rect(-5,-10,10,18,'#ffd46b');rect(-2,-4,4,12,'#fff1ad');break;
- case'sign':rect(-3,-8,6,28,'#4a3528');rect(-19,-20,38,17,'#8e6339');rect(-16,-17,32,11,'#d4b879');rect(-11,-13,22,2,'#624b31');break;
- case'building':case'building2':rect(-23,-17,46,35,'#75533b');rect(-27,-21,54,10,'#3c302b');rect(-17,-10,12,12,'#d9bd7a');rect(7,-10,10,12,'#d9bd7a');rect(-5,3,11,15,'#3a2d26');break;
- case'person':rect(-6,-11,12,13,'#c4a16e');rect(-8,-15,16,6,'#5a3a2c');rect(-8,2,16,17,'#4b5960');rect(-9,17,7,6,'#332c28');rect(2,17,7,6,'#332c28');break;
- case'well':rect(-19,-8,38,20,'#55585a');rect(-15,-13,30,7,'#a6a28a');rect(-10,-4,20,12,'#1a2730');rect(-6,-2,12,8,'#5bd5e8');break;
- case'train':rect(-24,-12,48,24,'#3d4d4d');rect(-18,-20,20,10,'#5a6a66');rect(-15,-17,10,5,'#f3cb76');rect(9,-6,10,10,'#d0b06b');[-15,0,15].forEach(a=>{ctx.fillStyle='#1b2527';ctx.beginPath();ctx.arc(a,13,6,0,7);ctx.fill()});break;
- case'rock':rect(-19,-9,38,22,'#6d7370');rect(-11,-17,23,13,'#92958a');rect(-5,-12,7,4,'#b9b7a2');break;
- case'shrine':rect(-17,-18,34,36,'#444b4b');rect(-12,-13,24,26,'#9f9b7d');rect(-7,-8,14,16,'#35444b');rect(-3,-4,6,8,'#62d7ed');break;
- case'chest':rect(-18,-10,36,23,'#67452d');rect(-18,-10,36,8,'#c28a3c');rect(-3,-3,7,10,'#f1d27a');break;
- case'portal':ctx.shadowColor='#5de9ff';ctx.shadowBlur=20;ctx.strokeStyle='#61dff5';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(0,0,16,25,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;rect(-3,-20,6,40,'#b8f6ff');break;
- default:rect(-12,-12,24,24,'#aaa');
- }ctx.restore();if(Math.hypot(o.x+.5-state.x,o.y+.5-state.y)<1.5){ctx.fillStyle='#fff0b6';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText(o.name.toUpperCase(),x,y-27)}}
-function drawPlayer(){let x=state.x*T+T/2,y=state.y*T+T/2;ctx.save();ctx.translate(x,y);rect(-10,11,8,10,'#423128');rect(3,11,8,10,'#423128');rect(-11,-2,22,17,'#426b68');rect(-10,-9,20,11,'#c9a36d');rect(-13,-14,26,7,'#7d5636');rect(-8,-18,16,6,'#c7a36d');rect(-7,-4,3,3,'#222');rect(4,-4,3,3,'#222');if(state.dir==='left')rect(-13,-4,4,3,'#222');if(state.dir==='right')rect(9,-4,4,3,'#222');rect(-13,2,4,9,'#c7a36d');rect(9,2,4,9,'#c7a36d');if(state.attack>0){ctx.strokeStyle='#e8eddf';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,27,-.7,.7);ctx.stroke();state.attack--}ctx.restore()}
-function draw(){drawGround();drawTrail();(objects[state.zone]||[]).forEach(drawObject); // ambient dust and glow
+function drawObject(o){
+ const x=o.x*T+T/2,y=o.y*T+T/2;
+ const spriteMap={tent:[0,3],building:[1,3],building2:[1,3],train:[2,3],well:[3,3],chest:[4,3],campfire:[5,3],sign:[6,3],portal:[7,3],stake:[6,3],crate:[4,3],rock:[5,2],shrine:[7,3],person:[Math.floor((state.step/10)%8),4]};
+ if(o.type==='stake'){
+   ctx.fillStyle='#4a3323';ctx.fillRect(x-2,y-17,4,30);ctx.fillStyle='#e8d18a';ctx.fillRect(x-7,y-15,14,5);ctx.fillStyle='#84603b';ctx.fillRect(x-12,y+10,24,4);
+ }else if(o.type==='rock'){
+   const sp=spriteMap.rock;ctx.drawImage(atlas,sp[0]*32,sp[1]*32,32,32,x-20,y-20,40,40);
+ }else if(o.type==='person'){
+   const sp=spriteMap.person;if(atlas.complete&&atlas.naturalWidth)ctx.drawImage(atlas,sp[0]*32,sp[1]*32,32,32,x-20,y-20,40,40);
+ }else{
+   const sp=spriteMap[o.type]||[4,3];
+   if(atlas.complete&&atlas.naturalWidth)ctx.drawImage(atlas,sp[0]*32,sp[1]*32,32,32,x-20,y-20,40,40);
+ }
+ if(o.type==='portal'||o.type==='well'){
+   ctx.save();ctx.globalAlpha=.25+Math.sin(state.step*.08)*.12;ctx.fillStyle='#6beaff';ctx.beginPath();ctx.ellipse(x,y+2,25,28,0,0,Math.PI*2);ctx.fill();ctx.restore();
+ }
+ if(Math.hypot(o.x+.5-state.x,o.y+.5-state.y)<1.5){ctx.fillStyle='#fff0b6';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText(o.name.toUpperCase(),x,y-27)}
+}
+function drawPlayer(){
+ const x=state.x*T+T/2,y=state.y*T+T/2;
+ const moving=!!(state.keys.ArrowLeft||state.keys.ArrowRight||state.keys.ArrowUp||state.keys.ArrowDown||state.keys.w||state.keys.a||state.keys.s||state.keys.d||state.touch.left||state.touch.right||state.touch.up||state.touch.down);
+ let frame=moving?Math.floor(state.step/2)%8:0;
+ const row=5;
+ ctx.save();
+ if(atlas.complete&&atlas.naturalWidth){
+   // Flip the sprite for left-facing movement; walking frames alternate leg positions.
+   if(state.dir==='left'){ctx.translate(x+20,y-20);ctx.scale(-1,1);ctx.drawImage(atlas,frame*32,row*32,32,32,0,0,40,40);}
+   else ctx.drawImage(atlas,frame*32,row*32,32,32,x-20,y-20,40,40);
+ }else{
+   rect(x-10,y+11,8,10,'#423128');rect(x+3,y+11,8,10,'#423128');rect(x-11,y-2,22,17,'#426b68');rect(x-10,y-9,20,11,'#c9a36d');rect(x-13,y-14,26,7,'#7d5636');
+ }
+ if(state.attack>0){ctx.strokeStyle='#e8eddf';ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,27,-.7,.7);ctx.stroke();state.attack--}
+ ctx.restore();
+}
+function draw(){drawGround();
+ // Trees and scrub are placed consistently at the map edges, keeping the exits readable.
+ if(state.zone!=='well'){
+   const treeSpots=state.zone==='ridge'?[[2,2],[5,9],[19,3],[21,9],[8,2]]:state.zone==='canyon'?[[2,3],[3,9],[20,3],[21,9]]:[[2,2],[2,10],[21,2],[21,10],[9,2],[18,10]];
+   treeSpots.forEach((p,i)=>{if(atlas.complete&&atlas.naturalWidth){const col=i%3;ctx.drawImage(atlas,col*32,2*32,32,32,p[0]*T-2,p[1]*T-5,44,44)}});
+ }
+ drawTrail();(objects[state.zone]||[]).forEach(drawObject); // ambient dust and glow
  for(let i=0;i<18;i++){let x=((i*113+state.step*.35)%W),y=(i*79+Math.sin(state.step*.02+i)*12)%H;rect(x,y,2,2,state.zone==='well'?'#7ce8ff66':'#fff0bd55')}
  if(state.zone==='well'){const g=ctx.createRadialGradient(W/2,H/2,30,W/2,H/2,430);g.addColorStop(0,'#45cbe51a');g.addColorStop(1,'#02070caa');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
  drawPlayer();ctx.fillStyle='#0c1717aa';ctx.fillRect(0,0,W,28);ctx.fillStyle='#f5e5b8';ctx.font='14px monospace';ctx.textAlign='left';ctx.fillText(zoneInfo[state.zone].name.toUpperCase(),14,19);ctx.textAlign='right';ctx.fillStyle='#e5c16d';ctx.fillText('SURVEY LOG  /  '+(state.stake?'STAKE SECURED':'FIELDWORK'),W-14,19);}
