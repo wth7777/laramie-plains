@@ -1,9 +1,9 @@
 // LARAMIE: PLAINS OF THE LOST — main.js
 // Entry point, game loop, state management
-import { StateMachine } from '/js/core/StateMachine.js';
-import { Input } from '/js/core/Input.js';
-import { TileMap, Camera } from '/js/core/TileMap.js';
-import { SPR } from '/js/core/Sprites.js';
+import { StateMachine } from './core/StateMachine.js';
+import { Input } from './core/Input.js';
+import { TileMap, Camera } from './core/TileMap.js';
+import { SPR } from './core/Sprites.js';
 
 const STATE = {
   TITLE: 'title',
