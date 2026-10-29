@@ -179,6 +179,11 @@ async function init() {
   const signY = 6; // just north of building entrance
   data[signY][signX] = 18; // sign
 
+  // Add a bush west of the building for combat testing
+  const bushX = 6;
+  const bushY = 10;
+  data[bushY][bushX] = 8; // bush
+
   tileMap = new TileMap(data);
   const worldPixelWidth = mapWidth * 16;
   const worldPixelHeight = mapHeight * 16;
@@ -197,6 +202,9 @@ async function init() {
   // Hide hint
   const hint = document.getElementById('hint');
   if (hint) hint.style.display = 'none';
+
+  // Attack cooldown
+  let attackCooldown = 0;
 
   stateMachine = new StateMachine({
     [STATE.TITLE]: {
@@ -250,6 +258,34 @@ async function init() {
             ]);
           }
           // Add more interactable tiles as needed
+        }
+
+        // Combat: press B to attack (cut bush)
+        if (Input.pressed.b && attackCooldown <= 0) {
+          // Determine tile in front of player
+          const tileSize = 16;
+          const px = Math.floor(player.x / tileSize);
+          const py = Math.floor(player.y / tileSize);
+          let tx = px, ty = py;
+          switch (player.dir) {
+            case 'up':   ty--; break;
+            case 'down': ty++; break;
+            case 'left': tx--; break;
+            case 'right':tx++; break;
+          }
+          const tileID = tileMap.getTile(tx, ty);
+          if (tileID === 8) { // bush -> cut
+            tileMap.setTile(tx, ty, 1); // change to grass
+            // Optionally play a swing sound
+          }
+          // Set cooldown
+          attackCooldown = 0.5; // seconds
+        }
+
+        // Decrease cooldown
+        if (attackCooldown > 0) {
+          attackCooldown -= dt;
+          if (attackCooldown < 0) attackCooldown = 0;
         }
 
         if (Input.pressed.start) stateMachine.change(STATE.PAUSE);
