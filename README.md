@@ -44,3 +44,10 @@ Open `index.html` in a modern browser, or serve this folder with any static web 
 - Existing story, map, mobile controls, and save data are preserved.
 
 Deploy by replacing the existing GitHub Pages site files with the contents of this ZIP.
+
+
+## V7 Zelda-style camera
+- Replaced the old player-centered canvas transform with a smooth world-space follow camera.
+- Camera zoom is closer (1.42x) and follows the player in both axes.
+- Camera clamps to world boundaries to prevent empty/oversized edge regions appearing.
+- HUD is rendered separately in screen space, so it stays fixed while the world scrolls.

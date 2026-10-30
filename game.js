@@ -5,7 +5,7 @@ ctx.imageSmoothingEnabled=false;
 const atlas=new Image();atlas.src='sprites.png';
 const W=960,H=540,T=40,COLS=24,ROWS=13;
 const $=id=>document.getElementById(id);
-const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0,cameraZoom:1,cameraTarget:1,transitionTimer:0,cinematicTimer:0,sceneClock:0};
+const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0,cameraZoom:1.42,cameraTarget:1.42,cameraX:480,cameraY:270,transitionTimer:0,cinematicTimer:0,sceneClock:0};
 const zoneInfo={
  camp:{name:'Survey Camp',ground:'#b6a06a',seed:3,desc:'Canvas tents, supply crates, and the first survey marker.', exits:{right:{zone:'town',x:2.2,y:6.4,label:'TOWN',side:'right'},up:{zone:'ridge',x:12,y:10.5,label:'RIDGE',side:'up'}}},
  town:{name:'Laramie Tent Town',ground:'#9a875d',seed:7,desc:'A rough frontier settlement rises beside the old trail.',exits:{left:{zone:'camp',x:21.2,y:6.4,label:'CAMP',side:'left'},right:{zone:'railhead',x:2.2,y:6.5,label:'RAILHEAD',side:'right'},up:{zone:'ridge',x:13,y:10.5,label:'RIDGE',side:'up'}}},
@@ -142,24 +142,67 @@ function drawPlayer(){
  if(state.inv>0&&Math.floor(state.inv*18)%2===0)ctx.globalAlpha=.45;if(state.attack>0){ctx.save();ctx.translate(x,y);const a={right:0,down:Math.PI/2,left:Math.PI,up:-Math.PI/2}[state.dir]||Math.PI/2;ctx.rotate(a);ctx.strokeStyle='#fff0bd';ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.arc(0,0,34,-.85,.85);ctx.stroke();ctx.strokeStyle='#9edbe5';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,40,-.7,.7);ctx.stroke();ctx.restore()}
  ctx.restore();
 }
-function draw(){ctx.save();
- const zoom=state.cameraZoom||1,focusX=state.x*T+T/2,focusY=state.y*T+T/2;
- ctx.translate(W/2, H/2);ctx.scale(zoom,zoom);
- ctx.translate(-focusX,-focusY);
+function draw(){
+ // Clear the full canvas before drawing the camera-transformed world.
+ ctx.save();
+ ctx.setTransform(1,0,0,1,0,0);
+ ctx.fillStyle='#111c1d';
+ ctx.fillRect(0,0,W,H);
+
+ // Zelda-style camera: smooth player tracking, with hard world-edge limits.
+ const zoom=state.cameraZoom||1.42;
+ const halfW=W/(2*zoom), halfH=H/(2*zoom);
+ const wantedX=state.x*T+T/2, wantedY=state.y*T+T/2;
+ const targetX=Math.max(halfW,Math.min(W-halfW,wantedX));
+ const targetY=Math.max(halfH,Math.min(H-halfH,wantedY));
+ if(!Number.isFinite(state.cameraX))state.cameraX=targetX;
+ if(!Number.isFinite(state.cameraY))state.cameraY=targetY;
+ const follow=0.13;
+ state.cameraX+=(targetX-state.cameraX)*follow;
+ state.cameraY+=(targetY-state.cameraY)*follow;
+
+ ctx.translate(W/2-state.cameraX*zoom,H/2-state.cameraY*zoom);
+ ctx.scale(zoom,zoom);
  if(state.shake>0)ctx.translate((Math.random()-.5)*state.shake*34,(Math.random()-.5)*state.shake*26);
+
  drawGround();
- // Trees and scrub are placed consistently at the map edges, keeping the exits readable.
  if(state.zone!=='well'){
    const treeSpots=state.zone==='ridge'?[[2,2],[5,9],[19,3],[21,9],[8,2]]:state.zone==='canyon'?[[2,3],[3,9],[20,3],[21,9]]:[[2,2],[2,10],[21,2],[21,10],[9,2],[18,10]];
    treeSpots.forEach((p,i)=>{if(atlas.complete&&atlas.naturalWidth){const col=i%3;ctx.drawImage(atlas,col*32,2*32,32,32,p[0]*T-2,p[1]*T-5,44,44)}});
  }
- drawTrail();(objects[state.zone]||[]).forEach(drawObject);drawEnemies();drawParticles(); // ambient dust and glow
- for(let i=0;i<18;i++){let x=((i*113+state.step*.35)%W),y=(i*79+Math.sin(state.step*.02+i)*12)%H;rect(x,y,2,2,state.zone==='well'?'#7ce8ff66':'#fff0bd55')}
- if(state.zone==='well'){const g=ctx.createRadialGradient(W/2,H/2,30,W/2,H/2,430);g.addColorStop(0,'#45cbe51a');g.addColorStop(1,'#02070caa');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
- drawPlayer();ctx.fillStyle='#0c1717aa';ctx.fillRect(0,0,W,28);ctx.fillStyle='#f5e5b8';ctx.font='14px monospace';ctx.textAlign='left';ctx.fillText(zoneInfo[state.zone].name.toUpperCase(),14,19);ctx.textAlign='right';ctx.fillStyle='#e5c16d';ctx.fillText('SURVEY LOG  /  '+(state.stake?'STAKE SECURED':'FIELDWORK'),W-14,19);
- if(state.cinematicTimer>0){const a=Math.min(.72,state.cinematicTimer*.32);ctx.fillStyle='rgba(2,6,10,'+a+')';ctx.fillRect(0,0,W,18);ctx.fillRect(0,H-18,W,18);}
- if(state.transitionTimer>0){ctx.fillStyle='rgba(0,0,0,'+(Math.sin((state.transitionTimer/.72)*Math.PI)*.78)+')';ctx.fillRect(0,0,W,H);}
- ctx.restore();}
+ drawTrail();
+ (objects[state.zone]||[]).forEach(drawObject);
+ drawEnemies();
+ drawParticles();
+ for(let i=0;i<18;i++){
+   let x=((i*113+state.step*.35)%W),y=(i*79+Math.sin(state.step*.02+i)*12)%H;
+   rect(x,y,2,2,state.zone==='well'?'#7ce8ff66':'#fff0bd55');
+ }
+ if(state.zone==='well'){
+   const g=ctx.createRadialGradient(W/2,H/2,30,W/2,H/2,430);
+   g.addColorStop(0,'#45cbe51a');g.addColorStop(1,'#02070caa');
+   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ }
+ drawPlayer();
+ ctx.restore();
+
+ // HUD is drawn in screen space and never zooms or drifts with the world.
+ ctx.save();
+ ctx.fillStyle='#0c1717ee';ctx.fillRect(0,0,W,29);
+ ctx.fillStyle='#f5e5b8';ctx.font='bold 14px monospace';ctx.textAlign='left';
+ ctx.fillText(zoneInfo[state.zone].name.toUpperCase(),14,19);
+ ctx.textAlign='right';ctx.fillStyle='#e5c16d';
+ ctx.fillText('SURVEY LOG  /  '+(state.stake?'STAKE SECURED':'FIELDWORK'),W-14,19);
+ if(state.cinematicTimer>0){
+   const a=Math.min(.72,state.cinematicTimer*.32);
+   ctx.fillStyle='rgba(2,6,10,'+a+')';ctx.fillRect(0,0,W,18);ctx.fillRect(0,H-18,W,18);
+ }
+ if(state.transitionTimer>0){
+   ctx.fillStyle='rgba(0,0,0,'+(Math.sin((state.transitionTimer/.72)*Math.PI)*.78)+')';
+   ctx.fillRect(0,0,W,H);
+ }
+ ctx.restore();
+}
 let last=0;function frame(t){const dt=Math.min(40,t-last||16);let dx=0,dy=0;if(state.keys.ArrowLeft||state.keys.a||state.touch.left)dx=-1;if(state.keys.ArrowRight||state.keys.d||state.touch.right)dx=1;if(state.keys.ArrowUp||state.keys.w||state.touch.up)dy=-1;if(state.keys.ArrowDown||state.keys.s||state.touch.down)dy=1;if(dx&&dy){dx*=.707;dy*=.707}if(dx||dy)move(dx,dy,dt);updateCombat(dt);draw();last=t;requestAnimationFrame(frame)}
 function start(){state.started=true;state.cinematicTimer=3.2;state.cameraZoom=1.16;state.cameraTarget=1.12;$('title-screen').classList.add('leaving');setTimeout(()=>$('title-screen').classList.add('hidden'),850);beep(440,.12);startMusic();updateHud();save();openDialog('PROLOGUE · THE NIGHT THE RAILS SANG',`October, 1889. A storm gathers over the Medicine Bow.
 
