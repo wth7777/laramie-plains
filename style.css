@@ -22,3 +22,31 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 @keyframes storm-drift{from{transform:translate3d(-2%,0,0)}to{transform:translate3d(2%,3%,0)}}@keyframes storm-pulse{0%,100%{opacity:.45}50%{opacity:1}}@keyframes title-rise{from{opacity:0;transform:translateY(18px);filter:blur(5px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}@keyframes button-glow{0%,100%{box-shadow:0 3px 0 #684a2a,0 0 0 #f2ca78}50%{box-shadow:0 3px 0 #684a2a,0 0 22px #f2ca7866}}
 .action-button.attack{background:linear-gradient(145deg,#51383b,#263a3c);border-color:#d18a70;box-shadow:0 4px 0 #0a1117,0 0 14px #e88b6a22}
 @media(max-width:560px){.title-content{padding:10px}.title-content h1{margin:10px 0 7px}.title-content p{margin:10px 0;line-height:1.55}.eyebrow{letter-spacing:1.5px}}
+
+
+/* Viewport-fit correction: keep the complete 16:9 playfield visible on phones.
+   The game canvas stays proportional; the shell yields space before the canvas
+   can be clipped by short mobile browser viewports or safe-area insets. */
+@media (max-width:560px){
+  html,body{width:100%;min-height:100svh;overflow-x:hidden;}
+  body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+  #game-shell{width:100%;max-width:none;margin:0 auto;padding-left:max(4px,env(safe-area-inset-left));padding-right:max(4px,env(safe-area-inset-right));}
+  main{width:100%;}
+  .game-wrap{width:100%;height:auto;aspect-ratio:16/9;overflow:hidden;margin-inline:auto;}
+  .game-wrap canvas{display:block;width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:16/9;object-fit:contain;}
+  .title-screen{inset:0;overflow:hidden;}
+  .title-content{max-height:100%;overflow:auto;overscroll-behavior:contain;}
+}
+@media (max-width:560px) and (orientation:landscape){
+  #game-shell{padding-top:2px;padding-bottom:2px;}
+  .topbar{min-height:24px;margin-bottom:2px;}
+  .brand-mark{font-size:15px;}
+  .brand strong{font-size:10px;}
+  .brand small{display:none;}
+  .hud-row{margin-top:2px;padding:3px;}
+  .mobile-controls{padding-top:0;}
+  .dpad{transform:scale(.52);width:80px;height:68px;margin-right:-30px;}
+  .dpad .up{left:47px;}
+  .dpad .down{top:77px;}
+  .action-button{width:42px;height:42px;}
+}
