@@ -106,7 +106,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v9 — dodge · day/night · mine · haunted plains · merchant · equipment</footer>
+<footer>Star-Well Survey · v9.1 — multi-room mine · rubble · switch · shaft guardian</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -492,19 +492,67 @@ const zones = {
     ]
   },
   mine: {
-    name:'The Forgotten Mine', biome:'mine',
+    name:'Mine Entrance', biome:'mine',
     tiles: makeGrid('m'),
     objs: [
-      {x:4,y:4,k:'sign',label:'Shaft 1864'},
-      {x:10,y:5,k:'enemy',id:'cave1',hp:2, type:'cave'},
-      {x:14,y:8,k:'enemy',id:'cave2',hp:2, type:'cave'},
-      {x:7,y:9,k:'chest',id:'c7',item:'reinforce'},
-      {x:16,y:3,k:'chest',id:'c8',item:'coins'},
+      {x:4,y:3,k:'sign',label:'Forgotten Mine — 1864'},
+      {x:8,y:6,k:'enemy',id:'cave1',hp:2, type:'cave'},
+      {x:14,y:8,k:'rubble',id:'rb1'},
+      {x:15,y:8,k:'rubble',id:'rb2'},
+      {x:16,y:8,k:'rubble',id:'rb3'},
+      {x:6,y:9,k:'chest',id:'c8',item:'coins'},
       {x:12,y:2,k:'rock'}
     ],
     links:[
       {x:19, y:6, to:'underworld', tx:2.5, ty:6, label:'CAVERN'},
+      {x:10, y:0, to:'mine_shaft', tx:10, ty:9.5, label:'SHAFT'},
       {x:10, y:11, to:'haunted', tx:10, ty:2.5, label:'PLAINS'}
+    ]
+  },
+  mine_shaft: {
+    name:'Collapsed Shaft', biome:'mine',
+    tiles: makeGrid('m'),
+    objs: [
+      {x:5,y:4,k:'sign',label:'Timber fails — 1865'},
+      {x:10,y:5,k:'enemy',id:'cave2',hp:2, type:'cave'},
+      {x:13,y:7,k:'enemy',id:'cave3',hp:3, type:'cave'},
+      {x:7,y:3,k:'rubble',id:'rb4'},
+      {x:8,y:3,k:'rubble',id:'rb5'},
+      {x:16,y:9,k:'switch',id:'sw1'},
+      {x:3,y:8,k:'chest',id:'c10',item:'coins'}
+    ],
+    links:[
+      {x:10, y:11, to:'mine', tx:10, ty:2.5, label:'ENTRANCE'},
+      {x:19, y:6, to:'mine_cache', tx:2.5, ty:6, label:'CACHE'},
+      {x:0, y:6, to:'mine_depths', tx:17.5, ty:6, label:'DEPTHS'}
+    ]
+  },
+  mine_cache: {
+    name:'Survey Cache', biome:'mine',
+    tiles: makeGrid('m'),
+    objs: [
+      {x:10,y:4,k:'sign',label:'Survey stores'},
+      {x:8,y:6,k:'chest',id:'c7',item:'reinforce'},
+      {x:14,y:7,k:'chest',id:'c11',item:'coins'},
+      {x:5,y:8,k:'enemy',id:'cave4',hp:2, type:'cave'},
+      {x:12,y:3,k:'stake',id:'M1'}
+    ],
+    links:[
+      {x:0, y:6, to:'mine_shaft', tx:17.5, ty:6, label:'SHAFT'}
+    ]
+  },
+  mine_depths: {
+    name:'Mine Depths', biome:'mine',
+    tiles: makeGrid('m'),
+    objs: [
+      {x:10,y:3,k:'sign',label:'No deeper — Company order'},
+      {x:10,y:6,k:'enemy',id:'caveboss',hp:4, type:'cave', boss:true},
+      {x:6,y:8,k:'chest',id:'c12',item:'compass'},
+      {x:15,y:5,k:'rubble',id:'rb6'},
+      {x:4,y:4,k:'rock'}
+    ],
+    links:[
+      {x:19, y:6, to:'mine_shaft', tx:2.5, ty:6, label:'SHAFT'}
     ]
   },
   haunted: {
@@ -593,7 +641,7 @@ function dialog(title, body, art){
 }
 function closeDialog(){ $('modal').classList.remove('show'); }
 function near(o,d=1.25){ return Math.hypot(S.x-(o.x+0.5), S.y-(o.y+0.5)) < d; }
-function alive(o){ if(o.k==='enemy'&&(o.hp||0)<=0) return false; if(o.k==='chest'&&S.opened[o.id]) return false; return true; }
+function alive(o){ if(o.k==='enemy'&&(o.hp||0)<=0) return false; if(o.k==='chest'&&S.opened[o.id]) return false; if(o.k==='rubble'&&S.opened['rubble_'+o.id]) return false; return true; }
 function Z(){ return zones[S.zone]; }
 
 function spawn(x,y,opt={}){
@@ -631,7 +679,12 @@ function updateStorm(dt){
 // ---------- Movement (faster + sprint) ----------
 function solid(tx,ty){
   if(tx<0||ty<0||tx>=COLS||ty>=ROWS) return true;
-  return Z().tiles[ty][tx]==='#';
+  if(Z().tiles[ty][tx]==='#') return true;
+  // unbroken rubble blocks movement
+  for(const o of Z().objs){
+    if(o.k==='rubble' && !S.opened['rubble_'+o.id] && Math.floor(o.x)===tx && Math.floor(o.y)===ty) return true;
+  }
+  return false;
 }
 function tryExit(){
   if(exitCd > 0) return;
@@ -643,6 +696,12 @@ function tryExit(){
     else if(L.y <= 1 && S.y < 1.45 && Math.abs(S.x - L.x) < 1.6) hit = true;
     else if(L.y >= ROWS-2 && S.y > ROWS-1.55 && Math.abs(S.x - L.x) < 1.6) hit = true;
     if(hit){
+      // Gate: depths require switch
+      if(L.to==='mine_depths' && !S.flags.mineSwitch){
+        toast('A sealed timber gate. Find a switch in the shaft.');
+        exitCd = 0.6;
+        return;
+      }
       exitCd = 1.15;
       SFX.portal();
       S.zone = L.to;
@@ -1086,6 +1145,21 @@ function interact(){
       }
       break;
     case'fire': toast('Warmth against the high-plains wind and the coming storm.'); burst(o.x*T+16,o.y*T+10,6,'#ff8844'); break;
+    case'rubble':
+      if(S.opened['rubble_'+o.id]) toast('Already cleared.');
+      else if(!S.hasHammer) toast('Packed rubble. A hammer could break it.');
+      else toast('Swing your hammer (Attack) to clear the rubble.');
+      break;
+    case'switch':
+      if(S.flags.mineSwitch){ toast('The mechanism is already engaged.'); }
+      else {
+        S.flags.mineSwitch = true;
+        SFX.portal();
+        note('A timber switch in the shaft unlocked the western depths.');
+        toast('You hear timber shift deeper in the mine…');
+        save();
+      }
+      break;
     case'starwell':
       if(S.flags.ending) dialog('Understar Pool','<p>The light is steady now. The measurement holds.</p>','ending');
       else dialog('Understar Pool','<p>Light without a source. The water (if it is water) reflects stars that are not in the sky above.</p><p>Something waits in this cavern — an echo of the surveyor who came before you.</p>','door');
@@ -1104,6 +1178,7 @@ function openChest(o){
   else if(o.item==='key'){ S.hasKey=true; msg+='a heavy brass key, still warm.'; note('Brass key found on the ridge. It matches no lock in camp.'); }
   else if(o.item==='reinforce'){ S.hasReinforce=true; S.dmg=2; msg+='a reinforced hammer head! Damage increased.'; note('Reinforced hammer fitted. Strikes land harder.'); }
   else if(o.item==='lantern'){ S.hasLantern=true; msg+='a star lantern. Hidden things may show.'; note('Star lantern recovered on the Haunted Plains.'); }
+  else if(o.item==='compass'){ S.hasCompass=true; msg+='a surveyor\'s compass!'; note('Compass found in the mine depths.'); }
   else { S.coins+=5; msg+='a few coins.'; }
   toast(msg); save();
 }
@@ -1120,13 +1195,26 @@ function useTool(){
       if(o.k==='enemy'&&alive(o)&&Math.hypot(ax-(o.x+0.5),ay-(o.y+0.5))<1.2){
         o.hp=(o.hp||1)-(S.dmg||1); SFX.hurt(); shake=5; burst(o.x*T+16,o.y*T+16,9,'#e07060');
         if(o.hp<=0){
-          toast(o.boss ? 'The Echo fades…' : 'Defeated!');
+          toast(o.boss ? (o.id==='caveboss' ? 'Shaft guardian down!' : 'The Echo fades…') : 'Defeated!');
           S.coins += o.boss ? 25 : 3;
-          if(o.boss && !S.flags.ending){
+          if(o.boss && o.id==='echo' && !S.flags.ending){
             S.flags.ending = true;
             save();
             setTimeout(()=>startCutscene('ending'), 800);
+          } else if(o.boss && o.id==='caveboss'){
+            S.flags.mineBoss = true;
+            note('Mine depths cleared. A compass waited in the dark.');
+            save();
           } else save();
+        }
+      }
+      if(o.k==='rubble'&&alive(o)&&Math.hypot(ax-(o.x+0.5),ay-(o.y+0.5))<1.35){
+        if(!S.hasHammer){ toast('Need a hammer to clear the rubble.'); }
+        else {
+          S.opened['rubble_'+o.id]=true; SFX.chest(); shake=4;
+          burst(o.x*T+16,o.y*T+16,10,'#8a8a70');
+          toast('Rubble cleared!');
+          save();
         }
       }
     }
@@ -1360,6 +1448,26 @@ function drawObj(o,t){
       ctx.stroke();
       break;
     }
+    case 'rubble': {
+      ctx.fillStyle = '#5a5a48';
+      ctx.fillRect(px+4*s, py+12*s, 28*s, 18*s);
+      ctx.fillStyle = '#3a3a30';
+      ctx.fillRect(px+8*s, py+10*s, 10*s, 8*s);
+      ctx.fillRect(px+18*s, py+14*s, 12*s, 10*s);
+      ctx.fillStyle = '#7a7a60';
+      ctx.fillRect(px+6*s, py+20*s, 8*s, 6*s);
+      break;
+    }
+    case 'switch': {
+      const on = S.flags.mineSwitch;
+      ctx.fillStyle = '#4a3a2a';
+      ctx.fillRect(px+10*s, py+18*s, 20*s, 10*s);
+      ctx.fillStyle = on ? '#60c080' : '#c06040';
+      ctx.fillRect(px+14*s, py+8*s + (on?6:0)*s, 12*s, 12*s);
+      ctx.fillStyle = '#8a7a60';
+      ctx.fillRect(px+18*s, py+4*s, 4*s, 8*s);
+      break;
+    }
     case 'starwell': {
       // glowing understar pool
       ctx.fillStyle = '#1a2a4a';
@@ -1590,7 +1698,7 @@ $('journalBtn').onclick=()=>{
 };
 $('mapBtn').onclick=()=>{
   SFX.ui();
-  dialog('Survey Map',`<p><b>Current:</b> ${Z().name}</p><p>Zones: Camp → Town → Rail → Ridge → Canyon → Understar → Mine → Haunted Plains</p><p>${S.hasMap?'Canyon trails unlocked.':'Map incomplete — seek the Wind Shrine.'}</p><p>The storm is moving in from the west.</p>`);
+  dialog('Survey Map',`<p><b>Current:</b> ${Z().name}</p><p>Zones: Camp → Town → Rail → Ridge → Canyon → Understar → Mine (Entrance/Shaft/Cache/Depths) → Haunted Plains</p><p>${S.hasMap?'Canyon trails unlocked.':'Map incomplete — seek the Wind Shrine.'}</p><p>The storm is moving in from the west.</p>`);
 };
 $('bagBtn').onclick=()=>{
   SFX.ui();

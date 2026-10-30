@@ -1,3 +1,11 @@
+## v9.1 — Multi-room Forgotten Mine
+
+- Mine Entrance, Collapsed Shaft, Survey Cache, Mine Depths
+- Breakable rubble (hammer)
+- Timber switch unlocks Depths
+- Shaft guardian mini-boss + compass reward
+- Gated progression
+
 # Changelog
 
 ## v9 — Ultimate Frontier foundation (current)
