@@ -34,3 +34,13 @@ Open `index.html` in a modern browser, or serve this folder with any static web 
 - The game uses original code-drawn pixel-art scenery, frontier props, a surveyor sprite, and procedural ambient effects.
 - Trail openings are visibly marked in gold and labeled at the screen edge. The walkable corridors are aligned to those openings.
 - This is a fresh prototype build. Syntax and ZIP integrity can be checked automatically, but it still needs a live playtest on a real phone for balance and collision edge cases.
+
+
+## V5 Cinematic Edition
+- Player-focused smooth camera push-in during sword attacks and nearby threats.
+- Smooth camera pull-back when combat pressure ends.
+- Screen-wide scene wipes when traveling between areas.
+- Cinematic opening push-in, title fade, vignette, and subtle letterbox treatment.
+- Existing story, map, mobile controls, and save data are preserved.
+
+Deploy by replacing the existing GitHub Pages site files with the contents of this ZIP.

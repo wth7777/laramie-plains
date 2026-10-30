@@ -24,29 +24,98 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 @media(max-width:560px){.title-content{padding:10px}.title-content h1{margin:10px 0 7px}.title-content p{margin:10px 0;line-height:1.55}.eyebrow{letter-spacing:1.5px}}
 
 
-/* Viewport-fit correction: keep the complete 16:9 playfield visible on phones.
-   The game canvas stays proportional; the shell yields space before the canvas
-   can be clipped by short mobile browser viewports or safe-area insets. */
-@media (max-width:560px){
-  html,body{width:100%;min-height:100svh;overflow-x:hidden;}
-  body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
-  #game-shell{width:100%;max-width:none;margin:0 auto;padding-left:max(4px,env(safe-area-inset-left));padding-right:max(4px,env(safe-area-inset-right));}
-  main{width:100%;}
-  .game-wrap{width:100%;height:auto;aspect-ratio:16/9;overflow:hidden;margin-inline:auto;}
-  .game-wrap canvas{display:block;width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:16/9;object-fit:contain;}
-  .title-screen{inset:0;overflow:hidden;}
-  .title-content{max-height:100%;overflow:auto;overscroll-behavior:contain;}
+/* CINEMATIC V5 */
+.game-wrap { isolation:isolate; }
+#transition-flash {
+  position:absolute; inset:0; z-index:3; pointer-events:none;
+  background:#05090d; opacity:0;
 }
-@media (max-width:560px) and (orientation:landscape){
-  #game-shell{padding-top:2px;padding-bottom:2px;}
-  .topbar{min-height:24px;margin-bottom:2px;}
-  .brand-mark{font-size:15px;}
-  .brand strong{font-size:10px;}
-  .brand small{display:none;}
-  .hud-row{margin-top:2px;padding:3px;}
-  .mobile-controls{padding-top:0;}
-  .dpad{transform:scale(.52);width:80px;height:68px;margin-right:-30px;}
-  .dpad .up{left:47px;}
-  .dpad .down{top:77px;}
-  .action-button{width:42px;height:42px;}
+#transition-flash.active { animation: scene-wipe .72s ease-in-out both; }
+@keyframes scene-wipe {
+  0% { opacity:0; }
+  36% { opacity:.96; }
+  62% { opacity:.96; }
+  100% { opacity:0; }
+}
+.cinema-vignette {
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:radial-gradient(ellipse at center, transparent 48%, #03070a66 100%);
+  opacity:.7;
+}
+.title-screen { transition: opacity .85s ease, filter .85s ease; }
+.title-screen.leaving { opacity:0; filter:blur(8px); pointer-events:none; }
+.dialog { backdrop-filter:blur(5px); }
+@media(max-width:560px) {
+  .cinema-vignette { opacity:.42; }
+  #transition-flash { z-index:3; }
+}
+
+
+/* MOBILE VIEWPORT + D-PAD ALIGNMENT */
+@media (max-width:560px) {
+  .dialog, .map-card {
+    top: 7px !important;
+    right: 7px !important;
+    bottom: 7px !important;
+    left: 7px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding: 9px 11px !important;
+  }
+  .dialog {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 3px;
+  }
+  .dialog-top { flex: 0 0 auto; min-height: 25px; }
+  .dialog p {
+    flex: 0 1 auto;
+    min-height: 0;
+    margin: 7px 0 9px;
+    font-size: clamp(10px, 2.65vw, 12px);
+    line-height: 1.42;
+    overflow-wrap: anywhere;
+  }
+  #dialog-next { flex: 0 0 auto; align-self: flex-start; }
+
+  .dpad {
+    display: grid !important;
+    grid-template-columns: 40px 40px 40px;
+    grid-template-rows: 34px 34px 34px;
+    gap: 3px;
+    width: 126px !important;
+    height: 108px !important;
+    flex: 0 0 126px;
+    margin: 0 !important;
+    padding: 0;
+    transform: none !important;
+  }
+  .dpad button {
+    position: static !important;
+    inset: auto !important;
+    width: 40px !important;
+    height: 34px !important;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+    transform: none;
+  }
+  .dpad button:nth-child(1) { grid-column: 2; grid-row: 1; }
+  .dpad button:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .dpad button:nth-child(3) { grid-column: 2; grid-row: 3; }
+  .dpad button:nth-child(4) { grid-column: 3; grid-row: 2; }
+}
+@media (max-width:560px) and (max-height:720px) {
+  .dpad { transform: scale(.9) !important; transform-origin: left center; margin-right: -12px !important; }
 }
