@@ -5,7 +5,7 @@ ctx.imageSmoothingEnabled=false;
 const atlas=new Image();atlas.src='sprites.png';
 const W=960,H=540,T=40,COLS=24,ROWS=13;
 const $=id=>document.getElementById(id);
-const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,attack:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0};
+const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0};
 const zoneInfo={
  camp:{name:'Survey Camp',ground:'#b6a06a',seed:3,desc:'Canvas tents, supply crates, and the first survey marker.', exits:{right:{zone:'town',x:2.2,y:6.4,label:'TOWN',side:'right'},up:{zone:'ridge',x:12,y:10.5,label:'RIDGE',side:'up'}}},
  town:{name:'Laramie Tent Town',ground:'#9a875d',seed:7,desc:'A rough frontier settlement rises beside the old trail.',exits:{left:{zone:'camp',x:21.2,y:6.4,label:'CAMP',side:'left'},right:{zone:'railhead',x:2.2,y:6.5,label:'RAILHEAD',side:'right'},up:{zone:'ridge',x:13,y:10.5,label:'RIDGE',side:'up'}}},
@@ -47,7 +47,7 @@ function solid(tx,ty){if(tx<0||ty<0||tx>=COLS||ty>=ROWS)return true;const z=stat
  const obs=(objects[z]||[]).filter(o=>['tent','crate','building','building2','train','rock','shrine','well','portal','chest'].includes(o.type));
  return obs.some(o=>Math.abs(o.x-tx)<1&&Math.abs(o.y-ty)<1);
 }
-function move(dx,dy){if(!state.started||state.dialog||!$('map-card').classList.contains('hidden'))return;let nx=state.x+dx*.12,ny=state.y+dy*.12;if(dx)state.dir=dx<0?'left':'right';if(dy)state.dir=dy<0?'up':'down';if(!solid(Math.floor(nx),Math.floor(ny))){state.x=nx;state.y=ny;state.step++;if(state.step%8===0)sfx('step');}checkExit();}
+function move(dx,dy,dt=16){if(!state.started||state.dialog||!$('map-card').classList.contains('hidden'))return;const speed=3.25*(dt/1000);let nx=state.x+dx*speed,ny=state.y+dy*speed;if(dx)state.dir=dx<0?'left':'right';if(dy)state.dir=dy<0?'up':'down';if(!solid(Math.floor(nx),Math.floor(ny))){state.x=nx;state.y=ny;state.step++;state.walkTime+=dt;if(state.walkTime>210){sfx('step');state.walkTime=0;}}checkExit();}
 function checkExit(){const z=zoneInfo[state.zone].exits;let e=null;if(state.x<.62)e=z.left;if(state.x>COLS-.62)e=z.right;if(state.y<.62)e=z.up;if(state.y>ROWS-.62)e=z.down;if(e){state.zone=e.zone;state.x=e.x;state.y=e.y;state.inv=12;sfx('portal');toast('TRAIL OPEN: '+zoneInfo[state.zone].name);$('location').textContent=zoneInfo[state.zone].name;save();}}
 function interact(){if(state.dialog){closeDialog();return}if(!state.started)return;const o=nearby();if(!o){toast('Nothing nearby. Follow the gold trail markers to travel.');return}sfx('talk');
  if(o.type==='sign'){openDialog(o.name,signText());return}
@@ -60,7 +60,19 @@ function interact(){if(state.dialog){closeDialog();return}if(!state.started)retu
  openDialog(o.name,'Weathered by wind and time, this object holds a little of the frontier’s story.');
 }
 function signText(){const z=state.zone;if(z==='camp')return 'TRAIL BOARD\\n→ EAST: Laramie Tent Town\\n↑ NORTH: Medicine Bow Ridge\\n\\nLook for the gold-edged gaps in the map border. Walk through them to travel.';if(z==='town')return 'LARAMIE TENT TOWN\\n← WEST: Survey Camp\\n→ EAST: Railhead\\n↑ NORTH: Medicine Bow Ridge\\n\\nAsk the storekeeper about the singing canyon.';if(z==='railhead')return 'UNION PACIFIC RAILHEAD\\n← WEST: Tent Town\\n↑ NORTH: Starfall Canyon\\n\\nThe rails sing when the wind comes from the mountains.';if(z==='ridge')return 'MEDICINE BOW RIDGE\\n↓ SOUTH: Survey Camp\\n→ EAST: Starfall Canyon\\n\\nThree stars mark the old path.';if(z==='canyon')return 'STARFALL CANYON\\n← WEST: Ridge Trail\\n↓ SOUTH: Railhead\\n↑ NORTH: The Star-Well\\n\\nThe well is sealed. Find the survey stake at camp.';return 'THE STAR-WELL\\n↓ SOUTH: Starfall Canyon\\n\\nThe stars are not above you anymore.'}
-function useTool(){if(!state.started||state.dialog)return;if(!state.tool){toast('No tool yet. Search the survey cache in the Star-Well.');beep(180,.1);return}state.attack=10;sfx('item');const o=nearby();if(o&&o.type==='rock'){state.coins++;toast('You chip a brass token from the mineral seam!');save();updateHud()}else toast('You swing the survey hammer. The sound echoes across the prairie.');}
+function useTool(){
+ if(!state.started||state.dialog||state.attackCooldown>0)return;
+ state.attack=.24;state.attackCooldown=.34;state.shake=.12;
+ sfx('slash');
+ const dir={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]}[state.dir]||[0,1];
+ const foes=enemyList();let hit=false;
+ foes.forEach(e=>{const vx=e.x-state.x,vy=e.y-state.y,along=vx*dir[0]+vy*dir[1],side=Math.abs(vx*dir[1]-vy*dir[0]);if(along>.05&&along<1.35&&side<.72){e.hp--;e.flash=.18;e.x+=dir[0]*.24;e.y+=dir[1]*.24;hit=true;burst(e.x*T+T/2,e.y*T+T/2,'#f7d779',9);if(e.hp<=0){e.dead=true;state.coins++;toast('Enemy defeated · +1 brass');sfx('item');save();updateHud()}else sfx('hurt')}});
+ if(!hit){burst(state.x*T+T/2+dir[0]*24,state.y*T+T/2+dir[1]*24,'#dcecff',5);if(state.tool){const o=nearby();if(o&&o.type==='rock'){state.coins++;toast('You chip a brass token from the mineral seam!');save();updateHud()}else toast('Your survey hammer rings across the prairie.')} }
+}
+function enemyList(){if(!state.enemies[state.zone]){const spots={ridge:[[9,7],[18,5]],canyon:[[8,5],[15,9],[19,3]],well:[[5,7],[18,5]]};state.enemies[state.zone]=(spots[state.zone]||[]).map((p,i)=>({x:p[0],y:p[1],homeX:p[0],homeY:p[1],hp:2,phase:i*2,flash:0,dead:false,hitWait:0}));}return state.enemies[state.zone].filter(e=>!e.dead)}
+function burst(x,y,color,n=7){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=35+Math.random()*115;state.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.28+Math.random()*.28,max:.56,color});}}
+function updateCombat(dt){const sec=dt/1000;state.attack=Math.max(0,state.attack-sec);state.attackCooldown=Math.max(0,state.attackCooldown-sec);state.shake=Math.max(0,state.shake-sec);state.particles=state.particles.filter(p=>p.life>0);state.particles.forEach(p=>{p.life-=sec;p.x+=p.vx*sec;p.y+=p.vy*sec;p.vy+=70*sec});if(!state.started||state.dialog)return;enemyList().forEach(e=>{e.phase+=sec*2;e.flash=Math.max(0,e.flash-sec);e.hitWait=Math.max(0,e.hitWait-sec);const d=Math.hypot(state.x-e.x,state.y-e.y);if(d<4.3&&d>1.0){const dx=(state.x-e.x)/d,dy=(state.y-e.y)/d,nx=e.x+dx*sec*.52,ny=e.y+dy*sec*.52;if(!solid(Math.floor(nx),Math.floor(ny))){e.x=nx;e.y=ny}}if(d<.78&&e.hitWait<=0&&state.inv<=0){state.hp=Math.max(0,state.hp-1);state.inv=.9;e.hitWait=1.1;state.shake=.22;burst(state.x*T+20,state.y*T+20,'#ff8a72',10);sfx('hurt');updateHud();if(state.hp===0){state.hp=3;state.zone='camp';state.x=5.5;state.y=6.5;toast('You were rescued and returned to Survey Camp.');save();updateHud()}}});state.inv=Math.max(0,state.inv-sec)}
+function sfx(name){if(name==='slash'){beep(240,.07,'sawtooth',.025);setTimeout(()=>beep(520,.06,'triangle',.018),35)}if(name==='step')beep(120,.025,'triangle',.008);if(name==='talk'){beep(520,.07);setTimeout(()=>beep(660,.09),80)}if(name==='item'){beep(620,.1);setTimeout(()=>beep(880,.15),90)}if(name==='hurt')beep(100,.2,'sawtooth',.04);if(name==='portal'){[220,330,440,660].forEach((f,i)=>setTimeout(()=>beep(f,.25,'sine',.025),i*100))}}
 function updateHud(){$('health').textContent='♥ '.repeat(state.hp).trim()+' '+ '♡ '.repeat(3-state.hp).trim();$('coins').textContent='◇ '+state.coins;$('location').textContent=zoneInfo[state.zone].name;$('objective').textContent=!state.stake?'Find the survey stake near camp':!state.heard?'Follow the compass to the Starfall Canyon':!state.tool?'Explore the Star-Well for the survey cache':'Reach the Star-Well and uncover the voice';}
 function mapOpen(){if(!state.started)return;const list=$('map-list');list.innerHTML='';Object.entries(zoneInfo).forEach(([k,v])=>{const d=document.createElement('div');d.className='map-item'+(k===state.zone?' current':'');d.innerHTML='<b>'+v.name+'</b><small>'+(k===state.zone?'YOU ARE HERE':v.desc)+'</small>';list.appendChild(d)});$('map-card').classList.remove('hidden')}
 function drawGround(){
@@ -109,6 +121,8 @@ function drawObject(o){
  }
  if(Math.hypot(o.x+.5-state.x,o.y+.5-state.y)<1.5){ctx.fillStyle='#fff0b6';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText(o.name.toUpperCase(),x,y-27)}
 }
+function drawEnemies(){enemyList().forEach(e=>{const x=e.x*T+T/2,y=e.y*T+T/2;ctx.save();ctx.translate(x,y+Math.sin(e.phase*3)*2);ctx.fillStyle='#0006';ctx.beginPath();ctx.ellipse(0,14,13,5,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=e.flash>0?'#fff3c4':'#4d3440';ctx.fillRect(-10,-9,20,19);ctx.fillStyle='#b86b5b';ctx.fillRect(-8,-15,16,8);ctx.fillStyle='#ffe9b0';ctx.fillRect(-6,-7,3,3);ctx.fillRect(4,-7,3,3);ctx.fillStyle='#211d27';ctx.fillRect(-5,2,10,3);ctx.fillStyle='#e6b65c';ctx.fillRect(-9,-19,18,3);ctx.fillStyle='#b8e0d0';ctx.fillRect(-9,-19,18*(e.hp/2),3);ctx.restore()})}
+function drawParticles(){state.particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1}
 function drawPlayer(){
  const x=state.x*T+T/2,y=state.y*T+T/2;
  const moving=!!(state.keys.ArrowLeft||state.keys.ArrowRight||state.keys.ArrowUp||state.keys.ArrowDown||state.keys.w||state.keys.a||state.keys.s||state.keys.d||state.touch.left||state.touch.right||state.touch.up||state.touch.down);
@@ -122,21 +136,25 @@ function drawPlayer(){
  }else{
    rect(x-10,y+11,8,10,'#423128');rect(x+3,y+11,8,10,'#423128');rect(x-11,y-2,22,17,'#426b68');rect(x-10,y-9,20,11,'#c9a36d');rect(x-13,y-14,26,7,'#7d5636');
  }
- if(state.attack>0){ctx.strokeStyle='#e8eddf';ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,27,-.7,.7);ctx.stroke();state.attack--}
+ if(state.inv>0&&Math.floor(state.inv*18)%2===0)ctx.globalAlpha=.45;if(state.attack>0){ctx.save();ctx.translate(x,y);const a={right:0,down:Math.PI/2,left:Math.PI,up:-Math.PI/2}[state.dir]||Math.PI/2;ctx.rotate(a);ctx.strokeStyle='#fff0bd';ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.arc(0,0,34,-.85,.85);ctx.stroke();ctx.strokeStyle='#9edbe5';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,40,-.7,.7);ctx.stroke();ctx.restore()}
  ctx.restore();
 }
-function draw(){drawGround();
+function draw(){ctx.save();if(state.shake>0)ctx.translate((Math.random()-.5)*state.shake*34,(Math.random()-.5)*state.shake*26);drawGround();
  // Trees and scrub are placed consistently at the map edges, keeping the exits readable.
  if(state.zone!=='well'){
    const treeSpots=state.zone==='ridge'?[[2,2],[5,9],[19,3],[21,9],[8,2]]:state.zone==='canyon'?[[2,3],[3,9],[20,3],[21,9]]:[[2,2],[2,10],[21,2],[21,10],[9,2],[18,10]];
    treeSpots.forEach((p,i)=>{if(atlas.complete&&atlas.naturalWidth){const col=i%3;ctx.drawImage(atlas,col*32,2*32,32,32,p[0]*T-2,p[1]*T-5,44,44)}});
  }
- drawTrail();(objects[state.zone]||[]).forEach(drawObject); // ambient dust and glow
+ drawTrail();(objects[state.zone]||[]).forEach(drawObject);drawEnemies();drawParticles(); // ambient dust and glow
  for(let i=0;i<18;i++){let x=((i*113+state.step*.35)%W),y=(i*79+Math.sin(state.step*.02+i)*12)%H;rect(x,y,2,2,state.zone==='well'?'#7ce8ff66':'#fff0bd55')}
  if(state.zone==='well'){const g=ctx.createRadialGradient(W/2,H/2,30,W/2,H/2,430);g.addColorStop(0,'#45cbe51a');g.addColorStop(1,'#02070caa');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
- drawPlayer();ctx.fillStyle='#0c1717aa';ctx.fillRect(0,0,W,28);ctx.fillStyle='#f5e5b8';ctx.font='14px monospace';ctx.textAlign='left';ctx.fillText(zoneInfo[state.zone].name.toUpperCase(),14,19);ctx.textAlign='right';ctx.fillStyle='#e5c16d';ctx.fillText('SURVEY LOG  /  '+(state.stake?'STAKE SECURED':'FIELDWORK'),W-14,19);}
-let last=0;function frame(t){if(t-last>90){const dt=Math.min(40,t-last||16);let dx=0,dy=0;if(state.keys.ArrowLeft||state.keys.a||state.touch.left)dx=-1;if(state.keys.ArrowRight||state.keys.d||state.touch.right)dx=1;if(state.keys.ArrowUp||state.keys.w||state.touch.up)dy=-1;if(state.keys.ArrowDown||state.keys.s||state.touch.down)dy=1;if(dx&&dy){dx*=.707;dy*=.707}if(dx||dy)move(dx,dy);last=t}draw();requestAnimationFrame(frame)}
-function start(){state.started=true;$('title-screen').classList.add('hidden');beep(440,.12);startMusic();toast('Find the survey stake. The gold trail marks exits.');updateHud();save()}
+ drawPlayer();ctx.fillStyle='#0c1717aa';ctx.fillRect(0,0,W,28);ctx.fillStyle='#f5e5b8';ctx.font='14px monospace';ctx.textAlign='left';ctx.fillText(zoneInfo[state.zone].name.toUpperCase(),14,19);ctx.textAlign='right';ctx.fillStyle='#e5c16d';ctx.fillText('SURVEY LOG  /  '+(state.stake?'STAKE SECURED':'FIELDWORK'),W-14,19);ctx.restore();}
+let last=0;function frame(t){const dt=Math.min(40,t-last||16);let dx=0,dy=0;if(state.keys.ArrowLeft||state.keys.a||state.touch.left)dx=-1;if(state.keys.ArrowRight||state.keys.d||state.touch.right)dx=1;if(state.keys.ArrowUp||state.keys.w||state.touch.up)dy=-1;if(state.keys.ArrowDown||state.keys.s||state.touch.down)dy=1;if(dx&&dy){dx*=.707;dy*=.707}if(dx||dy)move(dx,dy,dt);updateCombat(dt);draw();last=t;requestAnimationFrame(frame)}
+function start(){state.started=true;$('title-screen').classList.add('hidden');beep(440,.12);startMusic();updateHud();save();openDialog('PROLOGUE · THE NIGHT THE RAILS SANG',`October, 1889. A storm gathers over the Medicine Bow.
+
+Three nights running, the Union Pacific rails have sung after midnight. Last night, a surveyor followed the sound into the dark — and did not return.
+
+You have been sent to find him. But the compass in your pocket is pointing somewhere no map has ever marked.`,()=>{toast('Find the survey stake. The gold trail marks exits.');});}
 document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='Escape'){closeDialog();$('map-card').classList.add('hidden');return}if(e.key===' '||e.key==='Enter'){interact();return}if(e.key.toLowerCase()==='x'){useTool();return}state.keys[e.key]=true;state.keys[e.key.toLowerCase()]=true});
 document.addEventListener('keyup',e=>{state.keys[e.key]=false;state.keys[e.key.toLowerCase()]=false});
 document.querySelectorAll('[data-dir]').forEach(b=>{const d=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();state.touch[d]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>state.touch[d]=false))});
