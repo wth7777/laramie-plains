@@ -5,7 +5,7 @@ ctx.imageSmoothingEnabled=false;
 const atlas=new Image();atlas.src='sprites.png';
 const W=960,H=540,T=40,COLS=24,ROWS=13;
 const $=id=>document.getElementById(id);
-const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0,cameraZoom:1.42,cameraTarget:1.42,cameraX:480,cameraY:270,transitionTimer:0,cinematicTimer:0,sceneClock:0};
+const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0,cameraZoom:1.22,cameraTarget:1.22,cameraX:240,cameraY:260,transitionTimer:0,cinematicTimer:0,sceneClock:0};
 const zoneInfo={
  camp:{name:'Survey Camp',ground:'#b6a06a',seed:3,desc:'Canvas tents, supply crates, and the first survey marker.', exits:{right:{zone:'town',x:2.2,y:6.4,label:'TOWN',side:'right'},up:{zone:'ridge',x:12,y:10.5,label:'RIDGE',side:'up'}}},
  town:{name:'Laramie Tent Town',ground:'#9a875d',seed:7,desc:'A rough frontier settlement rises beside the old trail.',exits:{left:{zone:'camp',x:21.2,y:6.4,label:'CAMP',side:'left'},right:{zone:'railhead',x:2.2,y:6.5,label:'RAILHEAD',side:'right'},up:{zone:'ridge',x:13,y:10.5,label:'RIDGE',side:'up'}}},
@@ -51,7 +51,7 @@ function solid(tx,ty){if(tx<0||ty<0||tx>=COLS||ty>=ROWS)return true;const z=stat
  return obs.some(o=>Math.abs(o.x-tx)<1&&Math.abs(o.y-ty)<1);
 }
 function move(dx,dy,dt=16){if(!state.started||state.dialog||!$('map-card').classList.contains('hidden'))return;const speed=3.25*(dt/1000);let nx=state.x+dx*speed,ny=state.y+dy*speed;if(dx)state.dir=dx<0?'left':'right';if(dy)state.dir=dy<0?'up':'down';if(!solid(Math.floor(nx),Math.floor(ny))){state.x=nx;state.y=ny;state.step++;state.walkTime+=dt;if(state.walkTime>210){sfx('step');state.walkTime=0;}}checkExit();}
-function checkExit(){const z=zoneInfo[state.zone].exits;let e=null;if(state.x<.62)e=z.left;if(state.x>COLS-.62)e=z.right;if(state.y<.62)e=z.up;if(state.y>ROWS-.62)e=z.down;if(e){state.zone=e.zone;state.x=e.x;state.y=e.y;state.inv=12;state.transitionTimer=.72;const wipe=$('transition-flash');wipe.classList.remove('active');void wipe.offsetWidth;wipe.classList.add('active');sfx('portal');toast('TRAIL OPEN: '+zoneInfo[state.zone].name);$('location').textContent=zoneInfo[state.zone].name;save();}}
+function checkExit(){const z=zoneInfo[state.zone].exits;let e=null;if(state.x<.62)e=z.left;if(state.x>COLS-.62)e=z.right;if(state.y<.62)e=z.up;if(state.y>ROWS-.62)e=z.down;if(e){state.zone=e.zone;state.x=e.x;state.y=e.y;state.cameraX=state.x*T+T/2;state.cameraY=state.y*T+T/2;state.inv=12;state.transitionTimer=.72;const wipe=$('transition-flash');wipe.classList.remove('active');void wipe.offsetWidth;wipe.classList.add('active');sfx('portal');toast('TRAIL OPEN: '+zoneInfo[state.zone].name);$('location').textContent=zoneInfo[state.zone].name;save();}}
 function interact(){if(state.dialog){closeDialog();return}if(!state.started)return;const o=nearby();if(!o){toast('Nothing nearby. Follow the gold trail markers to travel.');return}sfx('talk');
  if(o.type==='sign'){openDialog(o.name,signText());return}
  if(o.type==='stake'){if(!state.stake){state.stake=true;state.coins+=3;sfx('item');openDialog('SURVEY STAKE','You set the brass survey stake into the prairie soil. The compass needle swings north — then points toward the mountains.\\n\\nObjective complete: Find the survey stake.\\nReward: 3 brass tokens.',()=>{save();updateHud()});}else openDialog('SURVEY STAKE','Your stake is secure. The needle still trembles when turned toward the Star-Well.');return}
@@ -80,6 +80,7 @@ function updateHud(){$('health').textContent='♥ '.repeat(state.hp).trim()+' '+
 function mapOpen(){if(!state.started)return;if(state.dialog)closeDialog();const list=$('map-list');list.innerHTML='';Object.entries(zoneInfo).forEach(([k,v])=>{const d=document.createElement('div');d.className='map-item'+(k===state.zone?' current':'');d.innerHTML='<b>'+v.name+'</b><small>'+(k===state.zone?'YOU ARE HERE':v.desc)+'</small>';list.appendChild(d)});$('map-card').classList.remove('hidden')}
 function drawGround(){
  const z=zoneInfo[state.zone];
+ ctx.fillStyle=z.ground||'#b6a06a';ctx.fillRect(0,0,COLS*T,ROWS*T);
  const zoneTile=state.zone==='well'?6:state.zone==='canyon'?4:state.zone==='ridge'?3:state.zone==='railhead'?7:state.zone==='town'?1:0;
  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
    let tile=zoneTile;
@@ -150,14 +151,15 @@ function draw(){
  ctx.fillRect(0,0,W,H);
 
  // Zelda-style camera: smooth player tracking, with hard world-edge limits.
- const zoom=state.cameraZoom||1.42;
+ const zoom=state.cameraZoom||1.22;
  const halfW=W/(2*zoom), halfH=H/(2*zoom);
  const wantedX=state.x*T+T/2, wantedY=state.y*T+T/2;
  const targetX=Math.max(halfW,Math.min(W-halfW,wantedX));
  const targetY=Math.max(halfH,Math.min(H-halfH,wantedY));
  if(!Number.isFinite(state.cameraX))state.cameraX=targetX;
  if(!Number.isFinite(state.cameraY))state.cameraY=targetY;
- const follow=0.13;
+ const follow=1-Math.exp(-9*(Math.min(40,(performance.now()-(state._camTick||performance.now())))/1000));
+ state._camTick=performance.now();
  state.cameraX+=(targetX-state.cameraX)*follow;
  state.cameraY+=(targetY-state.cameraY)*follow;
 
@@ -211,12 +213,34 @@ Three nights running, the Union Pacific rails have sung after midnight. Last nig
 You have been sent to find him. But the compass in your pocket is pointing somewhere no map has ever marked.`,()=>{toast('Find the survey stake. The gold trail marks exits.');});}
 document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='Escape'){closeDialog();closeMap();return}if(e.key===' '||e.key==='Enter'){interact();return}if(e.key.toLowerCase()==='x'){useTool();return}state.keys[e.key]=true;state.keys[e.key.toLowerCase()]=true});
 document.addEventListener('keyup',e=>{state.keys[e.key]=false;state.keys[e.key.toLowerCase()]=false});
-document.querySelectorAll('[data-dir]').forEach(b=>{const d=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();state.touch[d]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>state.touch[d]=false))});
+document.querySelectorAll('[data-dir]').forEach(b=>{
+ const d=b.dataset.dir;
+ b.addEventListener('contextmenu',e=>e.preventDefault());
+ b.addEventListener('dragstart',e=>e.preventDefault());
+ b.addEventListener('selectstart',e=>e.preventDefault());
+ b.addEventListener('pointerdown',e=>{
+   e.preventDefault();
+   state.touch[d]=true;
+   if(b.setPointerCapture) b.setPointerCapture(e.pointerId);
+ },{passive:false});
+ ['pointerup','pointercancel','pointerleave','lostpointercapture'].forEach(ev=>
+   b.addEventListener(ev,e=>{state.touch[d]=false; if(ev==='pointerleave')e.preventDefault();},{passive:false})
+ );
+});
+document.addEventListener('contextmenu',e=>{
+ if(e.target.closest('.dpad,.mobile-controls,[data-dir]'))e.preventDefault();
+});
+document.addEventListener('selectstart',e=>{
+ if(e.target.closest('.dpad,.mobile-controls,[data-dir]'))e.preventDefault();
+});
 $('interactBtn').addEventListener('pointerdown',e=>{e.preventDefault();interact()});$('attackBtn').addEventListener('pointerdown',e=>{e.preventDefault();useTool()});$('startBtn').addEventListener('click',start);$('dialog-close').addEventListener('click',closeDialog);$('dialog-next').addEventListener('click',closeDialog);$('mapBtn').addEventListener('click',mapOpen);function closeMap(){ $('map-card').classList.add('hidden'); }
 $('map-close').addEventListener('click',closeMap);
 $('map-x').addEventListener('click',closeMap);
 $('map-card').addEventListener('click',e=>{if(e.target===$('map-card'))closeMap();});
 $('mapBtn').addEventListener('click',()=>{if(!$('map-card').classList.contains('hidden'))closeMap();else mapOpen();});$('journalBtn').addEventListener('click',()=>openDialog('FIELD JOURNAL','Survey stake: '+(state.stake?'secured':'not yet found')+'\\nStar marking: '+(state.heard?'heard the tone':'not yet discovered')+'\\nSurvey hammer: '+(state.tool?'in your pack':'not found')+'\\n\\nTip: signs explain nearby routes. Walk into the gold-edged openings at the border to change areas.'));$('soundBtn').addEventListener('click',()=>{state.muted=!state.muted;$('soundBtn').textContent=state.muted?'♫ MUTED':'♫ SOUND';if(state.muted){stopMusic()}else{beep(660,.12);if(state.started)startMusic();}});
 canvas.addEventListener('pointerdown',e=>{if(!state.started)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;if(y>H*.73)interact();else if(x<W*.25)state.touch.left=true;else if(x>W*.75)state.touch.right=true;});canvas.addEventListener('pointerup',()=>{state.touch.left=state.touch.right=false});
-load();updateHud();requestAnimationFrame(frame);
+load();
+state.cameraX=state.x*T+T/2;
+state.cameraY=state.y*T+T/2;
+updateHud();requestAnimationFrame(frame);
 })();

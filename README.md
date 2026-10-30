@@ -51,3 +51,11 @@ Deploy by replacing the existing GitHub Pages site files with the contents of th
 - Camera zoom is closer (1.42x) and follows the player in both axes.
 - Camera clamps to world boundaries to prevent empty/oversized edge regions appearing.
 - HUD is rendered separately in screen space, so it stays fixed while the world scrolls.
+
+
+## V8 Mobile Camera & Touch Fix
+- Reworked the camera to a less aggressive 1.22x Zelda-style follow zoom.
+- Frame-rate-independent smooth tracking and camera recentering after area transitions.
+- Ground color is painted beneath terrain tiles to prevent transparent atlas pixels showing as gaps.
+- Android directional controls now suppress text selection, long-press callouts, dragging and context menus.
+- D-pad uses a fixed symmetric 3x3 layout with explicit directional classes.

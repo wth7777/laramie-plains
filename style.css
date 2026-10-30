@@ -225,3 +225,56 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
   .map-item { min-height: 68px; padding: 12px; font-size: 13px; }
   .map-item small { font-size: 11px; line-height: 1.4; }
 }
+
+
+/* V8: Android touch controls must behave like game buttons, never selectable text. */
+html, body, #game-shell, .mobile-controls, .dpad, .dpad *,
+.action-controls, .action-controls * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.dpad, .dpad button, .action-controls button {
+  touch-action: none !important;
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+}
+.dpad {
+  display: grid !important;
+  grid-template-columns: 44px 44px 44px !important;
+  grid-template-rows: 40px 40px 40px !important;
+  gap: 3px !important;
+  width: 138px !important;
+  height: 126px !important;
+  flex: 0 0 138px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: relative !important;
+  transform: none !important;
+}
+.dpad button {
+  position: static !important;
+  inset: auto !important;
+  width: 44px !important;
+  height: 40px !important;
+  min-width: 44px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  line-height: 1 !important;
+  transform: none;
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+.dpad .up { grid-column: 2 !important; grid-row: 1 !important; }
+.dpad .left { grid-column: 1 !important; grid-row: 2 !important; }
+.dpad .right { grid-column: 3 !important; grid-row: 2 !important; }
+.dpad .down { grid-column: 2 !important; grid-row: 3 !important; }
+.dpad button:active { transform: none !important; filter: brightness(1.25); }
+@media (max-width:560px) {
+  .dpad { transform: none !important; margin-right: 0 !important; }
+}
