@@ -106,7 +106,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v9.1 — multi-room mine · rubble · switch · shaft guardian</footer>
+<footer>Star-Well Survey · v9.2 — detailed terrain · upgraded sprites · multi-room mine</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -1226,29 +1226,100 @@ function drawTile(tx,ty,ch,biome){
   const px=tx*T-camX, py=ty*T-camY;
   if(px<-T||py<-T||px>W||py>H) return;
   if(ch==='#'){
-    ctx.fillStyle='#2a3344'; ctx.fillRect(px,py,T,T);
-    ctx.fillStyle='#3a4558'; ctx.fillRect(px+2,py+2,T-4,T-4);
+    // stone wall with mortar and edge highlight
+    ctx.fillStyle='#1e2430'; ctx.fillRect(px,py,T,T);
+    ctx.fillStyle='#2a3344'; ctx.fillRect(px+2,py+2,T-4,T-4);
+    ctx.fillStyle='#3a4558';
+    ctx.fillRect(px+4,py+4,T/2-4,T/2-4);
+    ctx.fillRect(px+T/2+1,py+T/2+1,T/2-5,T/2-5);
+    ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(px,py+T-5,T,5);
+    ctx.fillStyle='rgba(255,255,255,0.04)'; ctx.fillRect(px,py,T,3);
     return;
   }
-  let base,detail;
-  if(biome==='prairie'||biome==='town'){ base=(tx+ty)%2? '#356235':'#3d6b3a'; detail='#4a7a45'; }
-  else if(biome==='ridge'){ base=(tx+ty)%2? '#4e4638':'#5a5040'; detail='#6a6050'; }
-  else if(biome==='star'){ base=(tx+ty)%2? '#1a1a2e':'#12122a'; detail='#2a2a4a'; }
-  else if(biome==='mine'){ base=(tx+ty)%2? '#2a2a28':'#222220'; detail='#3a3a34'; }
-  else if(biome==='haunted'){ base=(tx+ty)%2? '#2a3a32':'#24342c'; detail='#3a4a40'; }
-  else { base=(tx+ty)%2? '#5e4232':'#6a4a38'; detail='#7a5a48'; }
-  ctx.fillStyle=base; ctx.fillRect(px,py,T,T);
-  // Animated grass / detail
-  ctx.fillStyle=detail;
-  const sway = Math.sin(time*2.2 + tx*0.7 + ty)*1.5;
+  // biome bases
+  let base, mid, hi, det;
   if(biome==='prairie'||biome==='town'){
-    for(let i=0;i<3;i++){ const gx=px+6+(i*9+tx*3)%24 + sway, gy=py+10+(i*7+ty*2)%20; ctx.fillRect(gx,gy,2,4); }
+    base=(tx+ty)%2?'#2d5a2e':'#356b36'; mid='#3d7a3e'; hi='#4a8a48'; det='#5a9a50';
+  } else if(biome==='ridge'){
+    base=(tx+ty)%2?'#4a4236':'#564c40'; mid='#6a6050'; hi='#7a7060'; det='#8a8070';
+  } else if(biome==='canyon'){
+    base=(tx+ty)%2?'#5a3a28':'#6a4a32'; mid='#7a5a40'; hi='#8a6a50'; det='#9a7a58';
   } else if(biome==='star'){
-    // faint star dots on floor
-    if((tx*3+ty*7)%5===0){ ctx.fillStyle='rgba(180,200,255,0.35)'; ctx.fillRect(px+14,py+14,2,2); }
-  } else { ctx.fillRect(px+8,py+12,5,2); ctx.fillRect(px+20,py+22,6,2); }
-  ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(px,py+T-3,T,3);
+    base=(tx+ty)%2?'#12122a':'#0e0e22'; mid='#1a1a36'; hi='#22224a'; det='#4a6aaa';
+  } else if(biome==='mine'){
+    base=(tx+ty)%2?'#22221e':'#1a1a18'; mid='#2e2e28'; hi='#3a3a32'; det='#5a5a48';
+  } else if(biome==='haunted'){
+    base=(tx+ty)%2?'#1e2e28':'#182820'; mid='#2a3a32'; hi='#3a4a40'; det='#4a6a58';
+  } else {
+    base=(tx+ty)%2?'#5e4232':'#6a4a38'; mid='#7a5a48'; hi='#8a6a58'; det='#9a7a60';
+  }
+  ctx.fillStyle=base; ctx.fillRect(px,py,T,T);
+  // subtle noise / dirt
+  ctx.fillStyle=mid;
+  const h = ((tx*19+ty*7)%5);
+  ctx.fillRect(px+h*3, py+((tx+ty)%4)*4, 6, 3);
+  ctx.fillRect(px+T/2-2, py+T/2+h, 5, 4);
+
+  // biome-specific detail
+  if(biome==='prairie'||biome==='town'){
+    const sway = Math.sin(time*2.2 + tx*0.7 + ty)*2;
+    ctx.fillStyle=det;
+    for(let i=0;i<4;i++){
+      const gx=px+4+(i*10+tx*5)%(T-8)+sway*0.4;
+      const gy=py+8+(i*6+ty*3)%(T-12);
+      ctx.fillRect(gx, gy, 2, 5);
+      ctx.fillStyle=hi; ctx.fillRect(gx, gy, 1, 3);
+      ctx.fillStyle=det;
+    }
+    // dirt path hint toward center
+    if(Math.abs(tx-10)<2 || Math.abs(ty-6)<1){
+      ctx.fillStyle='rgba(90,70,40,0.25)';
+      ctx.fillRect(px+4,py+T/2-3,T-8,6);
+    }
+  } else if(biome==='ridge'){
+    ctx.fillStyle=hi;
+    ctx.fillRect(px+6,py+10,8,3);
+    ctx.fillRect(px+18,py+22,10,2);
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.fillRect(px,py,3,T);
+  } else if(biome==='star'){
+    if((tx*3+ty*7)%6===0){
+      ctx.fillStyle=`rgba(160,190,255,${0.25+Math.sin(time*2+tx)*0.15})`;
+      ctx.fillRect(px+T/2-1, py+T/2-1, 3, 3);
+    }
+    if((tx+ty)%4===0){
+      ctx.fillStyle='rgba(100,140,220,0.12)';
+      ctx.beginPath(); ctx.arc(px+T/2,py+T/2,6,0,Math.PI*2); ctx.fill();
+    }
+  } else if(biome==='mine'){
+    // timber supports on some tiles
+    if(tx%4===0){
+      ctx.fillStyle='#4a3a28';
+      ctx.fillRect(px+T/2-2, py, 4, T);
+      ctx.fillStyle='#5a4a30';
+      ctx.fillRect(px, py+8, T, 3);
+    }
+    ctx.fillStyle=det;
+    ctx.fillRect(px+8,py+14,4,3);
+    ctx.fillRect(px+20,py+24,5,2);
+  } else if(biome==='haunted'){
+    ctx.fillStyle=`rgba(80,120,100,${0.1+Math.sin(time+tx*0.5)*0.05})`;
+    ctx.fillRect(px,py,T,T);
+    if((tx*5+ty)%7===0){
+      ctx.fillStyle='rgba(140,180,160,0.2)';
+      ctx.fillRect(px+12,py+8,2,10);
+    }
+  } else if(biome==='canyon'){
+    ctx.fillStyle=hi;
+    ctx.fillRect(px+4,py+6,T-8,2);
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.fillRect(px,py+T-8,T,8);
+  }
+  // soft bottom shadow for depth
+  ctx.fillStyle='rgba(0,0,0,0.12)';
+  ctx.fillRect(px,py+T-4,T,4);
 }
+
 
 function drawObj(o,t){
   if(!alive(o)) return;
@@ -1274,46 +1345,62 @@ function drawObj(o,t){
       break;
     }
     case 'well': {
-      ctx.fillStyle = '#4a4a54';
-      ctx.beginPath(); ctx.ellipse(px+20*s, py+28*s, 16*s, 7*s, 0, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#2a2a32';
-      ctx.beginPath(); ctx.ellipse(px+20*s, py+26*s, 11*s, 5*s, 0, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#6a6a78'; ctx.lineWidth = 2*s;
-      ctx.beginPath(); ctx.ellipse(px+20*s, py+24*s, 14*s, 6*s, 0, 0, Math.PI*2); ctx.stroke();
-      ctx.fillStyle = '#5a4a3a';
-      ctx.fillRect(px+6*s, py+8*s, 4*s, 18*s);
-      ctx.fillRect(px+30*s, py+8*s, 4*s, 18*s);
-      ctx.fillRect(px+6*s, py+6*s, 28*s, 4*s);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(px+20*s, py+32*s, 18*s, 5*s, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#3a3a48';
+      ctx.beginPath(); ctx.ellipse(px+20*s, py+28*s, 17*s, 8*s, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1a1a24';
+      ctx.beginPath(); ctx.ellipse(px+20*s, py+26*s, 12*s, 5*s, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#6a6a7a'; ctx.lineWidth = 2.5*s;
+      ctx.beginPath(); ctx.ellipse(px+20*s, py+24*s, 15*s, 7*s, 0, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#5a4a32';
+      ctx.fillRect(px+5*s, py+6*s, 5*s, 20*s);
+      ctx.fillRect(px+30*s, py+6*s, 5*s, 20*s);
+      ctx.fillStyle = '#6a5a40';
+      ctx.fillRect(px+5*s, py+4*s, 30*s, 5*s);
+      ctx.fillStyle = '#4a3a28';
+      ctx.fillRect(px+5*s, py+4*s, 30*s, 2*s);
       if(S.stakeA && S.stakeB){
-        ctx.fillStyle = `rgba(100,180,255,${0.15+Math.sin(t*2)*0.08})`;
-        ctx.beginPath(); ctx.ellipse(px+20*s, py+22*s, 10*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = `rgba(100,180,255,${0.2+Math.sin(t*2)*0.1})`;
+        ctx.beginPath(); ctx.ellipse(px+20*s, py+22*s, 11*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
       }
       break;
     }
     case 'npc': {
-      ctx.fillStyle = '#2a3a4a';
-      ctx.fillRect(px+12*s, py+24*s, 5*s, 8*s);
-      ctx.fillRect(px+19*s, py+24*s, 5*s, 8*s);
-      ctx.fillStyle = '#3d5a4a';
-      ctx.fillRect(px+11*s, py+14*s, 14*s, 12*s);
-      ctx.fillStyle = '#e0c8a0';
-      ctx.beginPath(); ctx.arc(px+18*s, py+10*s, 7*s, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#4a3a2a';
-      ctx.fillRect(px+10*s, py+4*s, 16*s, 4*s);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(px+18*s, py+34*s, 10*s, 3*s, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1e2a38';
+      ctx.fillRect(px+11*s, py+24*s, 5*s, 9*s);
+      ctx.fillRect(px+20*s, py+24*s, 5*s, 9*s);
+      ctx.fillStyle = '#3d6a5a';
+      ctx.fillRect(px+10*s, py+13*s, 16*s, 13*s);
+      ctx.fillStyle = '#2d5a4a';
+      ctx.fillRect(px+10*s, py+13*s, 16*s, 3*s);
+      ctx.fillStyle = '#e8d0b0';
+      ctx.beginPath(); ctx.arc(px+18*s, py+9*s, 7.5*s, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(px+9*s, py+3*s, 18*s, 5*s);
+      ctx.fillRect(px+12*s, py+1*s, 12*s, 3*s);
       ctx.fillStyle = '#2a2a2a';
-      ctx.fillRect(px+15*s, py+9*s, 2*s, 2*s);
-      ctx.fillRect(px+20*s, py+9*s, 2*s, 2*s);
+      ctx.fillRect(px+14*s, py+8*s, 2.5*s, 2.5*s);
+      ctx.fillRect(px+20*s, py+8*s, 2.5*s, 2.5*s);
       break;
     }
     case 'chest': {
-      ctx.fillStyle = '#5a3a1a';
-      ctx.fillRect(px+6*s, py+16*s, 28*s, 16*s);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(px+8*s, py+30*s, 24*s, 4*s);
+      ctx.fillStyle = '#4a2e12';
+      ctx.fillRect(px+5*s, py+15*s, 30*s, 17*s);
       ctx.fillStyle = '#7a5a30';
-      ctx.fillRect(px+6*s, py+16*s, 28*s, 6*s);
+      ctx.fillRect(px+5*s, py+15*s, 30*s, 7*s);
+      ctx.fillStyle = '#8a6a38';
+      ctx.fillRect(px+5*s, py+15*s, 30*s, 2*s);
       ctx.fillStyle = '#e0b45c';
-      ctx.fillRect(px+17*s, py+20*s, 6*s, 6*s);
-      ctx.fillStyle = '#3a2a10';
-      ctx.fillRect(px+6*s, py+22*s, 28*s, 2*s);
+      ctx.fillRect(px+16*s, py+20*s, 8*s, 7*s);
+      ctx.fillStyle = '#c4923a';
+      ctx.fillRect(px+18*s, py+22*s, 4*s, 3*s);
+      ctx.fillStyle = '#2a1a08';
+      ctx.fillRect(px+5*s, py+22*s, 30*s, 2*s);
       break;
     }
     case 'sign': {
@@ -1493,73 +1580,108 @@ function drawPlayer(t){
   const px = S.x*T - camX;
   const py = S.y*T - camY;
   const s = SPR;
-  const walk = Math.sin(S.anim * 1.2) * 2.2 * s;
+  const walk = Math.sin(S.anim * 1.2) * 2.4 * s;
   const stride = Math.sin(S.anim * 1.2);
+  const dodging = S.dodgeT > 0;
 
-  if(S.invuln > 0 && Math.floor(t*12)%2===0) ctx.globalAlpha = 0.45;
+  if(S.invuln > 0 && Math.floor(t*12)%2===0) ctx.globalAlpha = 0.4;
+  if(dodging) ctx.globalAlpha = 0.7;
 
   // shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.beginPath(); ctx.ellipse(px+16*s, py+34*s, 11*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.beginPath(); ctx.ellipse(px+16*s, py+36*s, 12*s, 4.5*s, 0, 0, Math.PI*2); ctx.fill();
 
-  // legs
-  ctx.fillStyle = '#1e1e28';
-  const legA = stride * 3.5 * s;
-  const legB = -stride * 3.5 * s;
+  // legs with boots
+  ctx.fillStyle = '#1a1a24';
+  const legA = stride * 4 * s;
+  const legB = -stride * 4 * s;
   if(S.dir === 'left' || S.dir === 'right'){
-    ctx.fillRect(px+11*s, py+26*s, 5*s, 8*s);
-    ctx.fillRect(px+18*s, py+26*s, 5*s, 8*s);
+    ctx.fillRect(px+10*s, py+26*s, 6*s, 9*s);
+    ctx.fillRect(px+18*s, py+26*s, 6*s, 9*s);
+    // boot tips
+    ctx.fillStyle = '#2a2a38';
+    ctx.fillRect(px+9*s, py+33*s, 7*s, 3*s);
+    ctx.fillRect(px+18*s, py+33*s, 7*s, 3*s);
   } else {
-    ctx.fillRect(px+11*s, py+26*s + (legA>0?0:legA*0.3), 5*s, 8*s + Math.abs(legA)*0.3);
-    ctx.fillRect(px+18*s, py+26*s + (legB>0?0:legB*0.3), 5*s, 8*s + Math.abs(legB)*0.3);
+    ctx.fillStyle = '#1a1a24';
+    ctx.fillRect(px+10*s, py+26*s + (legA>0?0:legA*0.25), 6*s, 9*s + Math.abs(legA)*0.25);
+    ctx.fillRect(px+18*s, py+26*s + (legB>0?0:legB*0.25), 6*s, 9*s + Math.abs(legB)*0.25);
+    ctx.fillStyle = '#2a2a38';
+    ctx.fillRect(px+9*s, py+33*s, 7*s, 3*s);
+    ctx.fillRect(px+18*s, py+33*s, 7*s, 3*s);
   }
 
-  // body
-  ctx.fillStyle = '#2a5a7a';
-  ctx.fillRect(px+9*s, py+14*s + walk*0.3, 16*s, 13*s);
-  ctx.fillStyle = '#1e4a68';
-  ctx.fillRect(px+9*s, py+14*s + walk*0.3, 16*s, 3*s);
+  // coat body
+  ctx.fillStyle = '#245a7a';
+  ctx.fillRect(px+8*s, py+13*s + walk*0.3, 18*s, 14*s);
+  // coat shade / lapel
+  ctx.fillStyle = '#1a4a68';
+  ctx.fillRect(px+8*s, py+13*s + walk*0.3, 18*s, 4*s);
+  ctx.fillRect(px+15*s, py+17*s + walk*0.3, 3*s, 10*s);
+  // belt
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(px+8*s, py+24*s + walk*0.3, 18*s, 3*s);
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(px+15*s, py+24*s + walk*0.3, 4*s, 3*s);
+
+  // arms
+  ctx.fillStyle = '#245a7a';
+  if(S.dir==='right'){
+    ctx.fillRect(px+24*s, py+15*s + walk*0.2, 5*s, 10*s);
+  } else if(S.dir==='left'){
+    ctx.fillRect(px+5*s, py+15*s + walk*0.2, 5*s, 10*s);
+  } else {
+    ctx.fillRect(px+5*s, py+16*s, 4*s, 9*s);
+    ctx.fillRect(px+25*s, py+16*s, 4*s, 9*s);
+  }
 
   // head
   ctx.fillStyle = '#e8c8a0';
-  ctx.beginPath(); ctx.arc(px+17*s, py+9*s + walk*0.2, 7*s, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px+17*s, py+9*s + walk*0.2, 7.5*s, 0, Math.PI*2); ctx.fill();
+  // ear hint
+  ctx.fillStyle = '#d8b890';
+  if(S.dir!=='up') ctx.fillRect(px+23*s, py+8*s + walk*0.2, 2*s, 3*s);
 
-  // hat
+  // hat (wide frontier)
+  ctx.fillStyle = '#2a1e14';
+  ctx.fillRect(px+6*s, py+3*s + walk*0.2, 22*s, 5*s);
+  ctx.fillRect(px+10*s, py+0*s + walk*0.2, 14*s, 4*s);
   ctx.fillStyle = '#3a2a1a';
-  ctx.fillRect(px+8*s, py+3*s + walk*0.2, 18*s, 5*s);
-  ctx.fillRect(px+11*s, py+1*s + walk*0.2, 12*s, 3*s);
+  ctx.fillRect(px+10*s, py+1*s + walk*0.2, 14*s, 2*s);
 
   // face
   ctx.fillStyle = '#2a2a2a';
   if(S.dir === 'down'){
-    ctx.fillRect(px+14*s, py+8*s + walk*0.2, 2*s, 2*s);
-    ctx.fillRect(px+19*s, py+8*s + walk*0.2, 2*s, 2*s);
+    ctx.fillRect(px+13*s, py+8*s + walk*0.2, 2.5*s, 2.5*s);
+    ctx.fillRect(px+19*s, py+8*s + walk*0.2, 2.5*s, 2.5*s);
+    ctx.fillStyle = '#c09080';
+    ctx.fillRect(px+16*s, py+11*s + walk*0.2, 2*s, 1.5*s);
   } else if(S.dir === 'left'){
-    ctx.fillRect(px+13*s, py+8*s + walk*0.2, 2*s, 2*s);
+    ctx.fillRect(px+12*s, py+8*s + walk*0.2, 2.5*s, 2.5*s);
   } else if(S.dir === 'right'){
-    ctx.fillRect(px+20*s, py+8*s + walk*0.2, 2*s, 2*s);
+    ctx.fillRect(px+20*s, py+8*s + walk*0.2, 2.5*s, 2.5*s);
   }
 
   // hammer
   if(S.hasHammer){
-    ctx.fillStyle = '#c8c8d8';
+    ctx.fillStyle = S.hasReinforce ? '#e0d0a0' : '#c8c8d8';
     if(S.dir === 'right'){
-      ctx.fillRect(px+24*s, py+16*s, 14*s, 4*s);
-      ctx.fillStyle = '#8a6a30';
-      ctx.fillRect(px+22*s, py+14*s, 5*s, 8*s);
+      ctx.fillRect(px+26*s, py+15*s, 16*s, 4*s);
+      ctx.fillStyle = '#6a4a20';
+      ctx.fillRect(px+24*s, py+13*s, 5*s, 8*s);
     } else if(S.dir === 'left'){
-      ctx.fillRect(px-4*s, py+16*s, 14*s, 4*s);
-      ctx.fillStyle = '#8a6a30';
-      ctx.fillRect(px+9*s, py+14*s, 5*s, 8*s);
+      ctx.fillRect(px-6*s, py+15*s, 16*s, 4*s);
+      ctx.fillStyle = '#6a4a20';
+      ctx.fillRect(px+8*s, py+13*s, 5*s, 8*s);
     } else {
-      ctx.fillRect(px+15*s, py+6*s, 4*s, 12*s);
-      ctx.fillStyle = '#8a6a30';
-      ctx.fillRect(px+13*s, py+4*s, 8*s, 5*s);
+      ctx.fillRect(px+15*s, py+4*s, 4*s, 14*s);
+      ctx.fillStyle = '#6a4a20';
+      ctx.fillRect(px+12*s, py+2*s, 10*s, 5*s);
     }
   }
 
   if(S.sprint && (keys.ArrowUp||keys.w||keys.ArrowDown||keys.s||keys.ArrowLeft||keys.a||keys.ArrowRight||keys.d||touch.up||touch.down||touch.left||touch.right)){
-    if(Math.random() < 0.4) spawn(px+16*s, py+34*s, {c:'#b0a070', s:2*s, life:0.25, vy:-10});
+    if(Math.random() < 0.45) spawn(px+16*s, py+36*s, {c:'#b0a070', s:2*s, life:0.25, vy:-10});
   }
   ctx.globalAlpha = 1;
 }
