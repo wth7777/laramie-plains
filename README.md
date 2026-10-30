@@ -1,61 +1,59 @@
-# Laramie Plains: Echoes Beyond the Well — Swordbird-Inspired Upgrade
+# Laramie Plains — Star-Well Survey v9
 
-A standalone, mobile-friendly 16-bit browser adventure set in a fictionalized 19th-century Wyoming frontier. No build tools or server required.
+A 1867 Wyoming frontier mystery adventure for the browser.  
+Zelda-inspired exploration, combat, and story — playable on desktop and mobile.
 
-## Run locally
-Open `index.html` in a modern browser, or serve this folder with any static web server.
+## Play
 
-## Deploy to GitHub Pages
-1. Extract the ZIP.
-2. Upload all four files (`index.html`, `style.css`, `game.js`, `README.md`) to the root of your GitHub repository.
-3. Commit changes and let GitHub Pages publish.
-4. Open the same Pages URL on your phone.
+Open `index.html` locally, or deploy the folder to **GitHub Pages**.
+
+### GitHub Pages
+
+1. Create a repo (or use an existing one).
+2. Upload the contents of this folder (`index.html` at the root of the Pages branch, or in `/docs`).
+3. Settings → Pages → deploy from that branch.
+4. Open `https://<user>.github.io/<repo>/`
+
+All paths are relative; subdirectory hosting works.
 
 ## Controls
-- Touch arrow pad or keyboard arrows / WASD to move.
-- A / Space / Enter interacts.
-- B / X swings your sword. The survey hammer is still used to chip mineral seams after you find it.
-- MAP shows explored destinations; JOURNAL shows quest progress.
-- Sound is generated in the browser with Web Audio. Tap SOUND once to enable audio on mobile if needed.
-- Progress autosaves in browser local storage.
 
-## Latest mobile and story improvements
-- Compact phone layout gives the playfield more of the available screen and reduces surrounding padding. Touch controls and HUD are smaller on short screens; help text and footer are hidden during mobile play.
-- Story progression centers on the missing surveyor, the singing rail line, ancient star markings, and the sealed Star-Well. NPC dialogue and the journal/map support exploration.
+| Action | Keyboard | Mobile |
+|--------|----------|--------|
+| Move | WASD / Arrows | D-pad |
+| Sprint | Hold Shift | Sprint button |
+| Dodge | Z | Dodge button |
+| Interact | Space / Enter | Interact |
+| Attack | X | Attack |
+| Journal / Map / Bag | J / M / I | Menu buttons |
 
-## Swordbird-inspired upgrade
-- Adds a narrated prologue when starting a new session, plus an animated storm-lit title treatment.
-- Movement is now frame-rate independent and substantially faster, with diagonal movement normalized.
-- Adds hostile prairie shades in the ridge, canyon, and Star-Well; they pursue the player, deal contact damage, and can be defeated.
-- Sword attacks have directional hit detection, slash effects, hit flashes, particle bursts, and brief screen shake.
-- Mobile action button is relabeled SWORD and remains pointer/touch friendly.
+## What’s in v9
+
+- **Day/night cycle** with lighting; star lantern helps in the dark  
+- **Dodge roll** (i-frames)  
+- **The Forgotten Mine** and **The Haunted Plains** (new regions)  
+- **Merchant** in Laramie Tent Town (healing, reinforced hammer, compass, boots)  
+- **Equipment**: reinforced hammer (2× damage), compass, lantern, trail boots  
+- **Enemy types**: coyotes, outlaws, cave creatures, star-wraiths (teleport), boss Echo  
+- Illustrated cutscenes, underworld, story ending from v8  
+- Save system (`laramieStarWell_v9`) with migration from earlier keys where possible  
+
+## Main path
+
+1. Recover both brass stakes at camp  
+2. Investigate the Star-Well  
+3. Wind Shrine on the ridge → map  
+4. Brass key → Understar Door in the canyon  
+5. Understar Cavern → defeat the Echo of La Ramée  
+6. Optional: Mine, Haunted Plains, merchant upgrades  
 
 ## Design notes
-- The game uses original code-drawn pixel-art scenery, frontier props, a surveyor sprite, and procedural ambient effects.
-- Trail openings are visibly marked in gold and labeled at the screen edge. The walkable corridors are aligned to those openings.
-- This is a fresh prototype build. Syntax and ZIP integrity can be checked automatically, but it still needs a live playtest on a real phone for balance and collision edge cases.
 
+v9 is a **substantial expansion of v8**, not a full rewrite of the “Definitive Upgrade Plan.”  
+Systems that are fully playable: movement, dodge, combat, shop, new zones, day/night, equipment, saves, cutscenes.  
 
-## V5 Cinematic Edition
-- Player-focused smooth camera push-in during sword attacks and nearby threats.
-- Smooth camera pull-back when combat pressure ends.
-- Screen-wide scene wipes when traveling between areas.
-- Cinematic opening push-in, title fade, vignette, and subtle letterbox treatment.
-- Existing story, map, mobile controls, and save data are preserved.
+Still on the roadmap for later versions: multi-room dungeons, more puzzles, side quests, richer pixel atlas, region music layers, additional bosses.
 
-Deploy by replacing the existing GitHub Pages site files with the contents of this ZIP.
+## License
 
-
-## V7 Zelda-style camera
-- Replaced the old player-centered canvas transform with a smooth world-space follow camera.
-- Camera zoom is closer (1.42x) and follows the player in both axes.
-- Camera clamps to world boundaries to prevent empty/oversized edge regions appearing.
-- HUD is rendered separately in screen space, so it stays fixed while the world scrolls.
-
-
-## V8 Mobile Camera & Touch Fix
-- Reworked the camera to a less aggressive 1.22x Zelda-style follow zoom.
-- Frame-rate-independent smooth tracking and camera recentering after area transitions.
-- Ground color is painted beneath terrain tiles to prevent transparent atlas pixels showing as gaps.
-- Android directional controls now suppress text selection, long-press callouts, dragging and context menus.
-- D-pad uses a fixed symmetric 3x3 layout with explicit directional classes.
+Original game content for this project. Use and modify for your own Pages deploys.
