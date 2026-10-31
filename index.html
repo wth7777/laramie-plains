@@ -31,6 +31,7 @@ header{width:min(100%,900px);padding:8px 12px 4px;display:flex;justify-content:s
 .abtn button{min-width:112px;padding:12px 14px;border:none;border-radius:10px;background:#2d5a4a;color:#e8f0e8;font-weight:600;font-size:12px;letter-spacing:.04em;touch-action:none}
 .abtn .sec{background:#2a3a4c}
 .abtn .sprint{background:#4a3a2a}
+.abtn .block{background:#2a3a4c;border-color:#6a8a9a;color:#a0d8ff}
 .abtn button:active{filter:brightness(1.12)}
 .menus{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 6px;justify-content:center}
 .menus button{background:#151e2a;border:1px solid #2a3548;color:var(--muted);padding:6px 11px;border-radius:7px;font-size:11px;cursor:pointer}
@@ -96,6 +97,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
     <button class="sec" id="toolBtn">ATTACK</button>
     <button class="sprint" id="sprintBtn">SPRINT</button>
     <button class="sec" id="dodgeBtn" style="background:#3a4a5a">DODGE</button>
+    <button class="sec" id="blockBtn" style="background:#2a3a4c">BLOCK</button>
   </div>
 </section>
 
@@ -267,7 +269,7 @@ function fresh() {
     stakeA: false, stakeB: false, heardWell: false, hasHammer: false, hasKey: false, hasMap: false,
     hasReinforce: false, hasCompass: false, hasLantern: false, hasBoots: false,
     opened: {}, flags: {}, notes: [], quests: {},
-    facing: 'down', anim: 0, invuln: 0, atk: 0, interactCd: 0, sprint: false,
+    facing: 'down', anim: 0, invuln: 0, atk: 0, interactCd: 0, sprint: false, blocking: false,
     dodgeCd: 0, dodgeT: 0, dayT: 0.35, // 0..1 day cycle
     dmg: 1
   };
@@ -361,6 +363,7 @@ const SFX = {
   ui: ()=>tone(680,'sine',0.035,0.09),
   portal: ()=>{ tone(220,'sine',0.2,0.18); setTimeout(()=>tone(330,'sine',0.25,0.14),120); },
   well: ()=>{ tone(196,'sine',0.3,0.2); setTimeout(()=>tone(247,'sine',0.3,0.18),160); setTimeout(()=>tone(294,'sine',0.45,0.16),340); },
+  block: ()=>{ tone(400,'square',0.1,0.15); tone(600,'square',0.1,0.12); },
   success: ()=>{ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,'triangle',0.2,0.18),i*80)); },
   thunder
 };
@@ -724,6 +727,7 @@ function move(dt){
   if(keys.ArrowLeft||keys.a||touch.left) dx-=1;
   if(keys.ArrowRight||keys.d||touch.right) dx+=1;
   S.sprint = !!(keys.Shift||keys.shift||touch.sprint);
+  S.blocking = !!(touch.block);
   // Dodge roll (Z or dodge button)
   if((keys.z||keys.Z||touch.dodge) && S.dodgeCd<=0 && S.dodgeT<=0){
     S.dodgeT = 0.28; S.dodgeCd = 0.85; S.invuln = Math.max(S.invuln, 0.28);
@@ -776,9 +780,14 @@ function move(dt){
       }
     }
     if(dist<0.65&&S.invuln<=0){
-      S.hp=Math.max(0,S.hp-1); S.invuln=1.05; SFX.hurt(); shake=7;
-      burst(S.x*T+16,S.y*T+16,12,'#e07060'); toast('You take a hit!');
-      if(S.hp<=0){ toast('You fall… waking at camp.'); S.hp=S.maxHp; S.zone='camp'; S.x=4.5; S.y=6.5; save(); }
+      if(S.blocking){
+        S.invuln=0.6; SFX.block(); shake=3;
+        burst(S.x*T+16,S.y*T+16,8,'#c8d0ff'); toast('Blocked!');
+      } else {
+        S.hp=Math.max(0,S.hp-1); S.invuln=1.05; SFX.hurt(); shake=7;
+        burst(S.x*T+16,S.y*T+16,12,'#e07060'); toast('You take a hit!');
+        if(S.hp<=0){ toast('You fall… waking at camp.'); S.hp=S.maxHp; S.zone='camp'; S.x=4.5; S.y=6.5; save(); }
+      }
     }
   }
 }
@@ -1591,6 +1600,16 @@ function drawPlayer(t){
   ctx.fillStyle = 'rgba(0,0,0,0.32)';
   ctx.beginPath(); ctx.ellipse(px+16*s, py+36*s, 12*s, 4.5*s, 0, 0, Math.PI*2); ctx.fill();
 
+  // block shield
+  if(S.blocking){
+    ctx.fillStyle = 'rgba(100,200,255,0.35)';
+    ctx.beginPath(); ctx.arc(px+16*s, py+20*s, 14*s, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#a0d8ff'; ctx.lineWidth = 2*s;
+    ctx.beginPath(); ctx.arc(px+16*s, py+20*s, 15*s, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(px+16*s, py+16*s, 3*s, 0, Math.PI*2); ctx.fill();
+  }
+
   // legs with boots
   ctx.fillStyle = '#1a1a24';
   const legA = stride * 4 * s;
@@ -1813,6 +1832,12 @@ if(dodgeBtn){
   dodgeBtn.addEventListener('pointerup',()=>touch.dodge=false);
   dodgeBtn.addEventListener('pointercancel',()=>touch.dodge=false);
 }
+const blockBtn = $('blockBtn');
+if(blockBtn){
+  blockBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); touch.block=true; resume(); });
+  blockBtn.addEventListener('pointerup',()=>touch.block=false);
+  blockBtn.addEventListener('pointercancel',()=>touch.block=false);
+}
 $('journalBtn').onclick=()=>{
   SFX.ui();
   const n=S.notes.length? '<ul>'+S.notes.map(x=>`<li>${x}</li>`).join('')+'</ul>':'<p>Field book still blank.</p>';
@@ -1840,6 +1865,7 @@ $('helpBtn').onclick=()=>{
   <ul><li><b>Move</b> WASD / Arrows / D-pad</li>
   <li><b>Sprint</b> Hold Shift or Sprint button</li>
   <li><b>Dodge</b> Z or Dodge button (i-frames)</li>
+  <li><b>Block</b> hold Block button to reduce damage</li>
   <li><b>Interact</b> Space / Enter / button</li>
   <li><b>Tool</b> X / button (attacks once you have the hammer)</li>
   <li>Walk into gold-framed openings to change areas</li></ul>
