@@ -510,7 +510,8 @@ const zones = {
       {x:15,y:8,k:'rubble',id:'rb2'},
       {x:16,y:8,k:'rubble',id:'rb3'},
       {x:6,y:9,k:'chest',id:'c8',item:'coins'},
-      {x:12,y:2,k:'rock'}
+      {x:12,y:2,k:'rock'},
+      {x:2,y:6,k:'railcar',id:'railcar1',label:'Abandoned Railcar'}
     ],
     links:[
       {x:19, y:6, to:'underworld', tx:2.5, ty:6, label:'CAVERN'},
@@ -1680,6 +1681,25 @@ function drawObj(o,t){
       ctx.moveTo(px+20*s, py+8*s);
       ctx.lineTo(px+8*s, py+30*s);
       ctx.stroke();
+      break;
+    }
+    case 'railcar': {
+      // abandoned mine railcar
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(px+4*s, py+32*s, 32*s, 4*s);
+      ctx.fillStyle = '#2a2a32';
+      ctx.fillRect(px+4*s, py+20*s, 32*s, 14*s);
+      ctx.fillStyle = '#3a3a48';
+      ctx.fillRect(px+4*s, py+14*s, 32*s, 8*s);
+      ctx.fillStyle = '#c4923a';
+      ctx.fillRect(px+8*s, py+16*s, 6*s, 4*s);
+      ctx.fillRect(px+26*s, py+16*s, 6*s, 4*s);
+      ctx.fillStyle = '#1a1a18';
+      ctx.fillRect(px+6*s, py+24*s, 6*s, 6*s); // wheel
+      ctx.fillRect(px+28*s, py+24*s, 6*s, 6*s); // wheel
+      ctx.fillStyle = '#3a3a48';
+      ctx.fillRect(px+8*s, py+24*s, 2*s, 4*s);
+      ctx.fillRect(px+30*s, py+24*s, 2*s, 4*s);
       break;
     }
     case 'rubble': {
