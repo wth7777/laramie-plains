@@ -270,8 +270,13 @@ function fresh() {
     hasReinforce: false, hasCompass: false, hasLantern: false, hasBoots: false,
     opened: {}, flags: {}, notes: [], quests: {},
     facing: 'down', anim: 0, invuln: 0, atk: 0, interactCd: 0, sprint: false, blocking: false,
-    dodgeCd: 0, dodgeT: 0, dayT: 0.35, // 0..1 day cycle
-    dmg: 1
+    dodgeCd: 0, dodgeT: 0, dayT: 0.35,
+    dmg: 1,
+    mineRocksCleared: false,
+    mineBossDefeated: false,
+    hauntedBossDefeated: false,
+    hasCopperKey: false,
+    wellChamberUnlocked: false
   };
 }
 function migrate(s){
@@ -474,7 +479,8 @@ const zones = {
       {x:10,y:5,k:'cave'},
       {x:6,y:8,k:'enemy',id:'ban1',hp:3},
       {x:14,y:3,k:'chest',id:'c5',item:'coins'},
-      {x:4,y:4,k:'sign',label:'Understar Gate'}
+      {x:4,y:4,k:'sign',label:'Understar Gate'},
+      {x:1,y:6,k:'mineRock',id:'mineEntrance',label:'Mine Entrance Blocked'}
     ],
     links:[
       {x:19, y:6, to:'ridge', tx:2.5, ty:6, label:'RIDGE'}
@@ -522,7 +528,8 @@ const zones = {
       {x:7,y:3,k:'rubble',id:'rb4'},
       {x:8,y:3,k:'rubble',id:'rb5'},
       {x:16,y:9,k:'switch',id:'sw1'},
-      {x:3,y:8,k:'chest',id:'c10',item:'coins'}
+      {x:3,y:8,k:'chest',id:'c10',item:'coins'},
+      {x:10,y:3,k:'relic',id:'mineRelic',label:'Creepy Relic'}
     ],
     links:[
       {x:10, y:11, to:'mine', tx:10, ty:2.5, label:'ENTRANCE'},
@@ -567,7 +574,17 @@ const zones = {
       {x:10,y:5,k:'shrine'},
       {x:16,y:3,k:'chest',id:'c9',item:'lantern'},
       {x:3,y:9,k:'sign',label:'No trespass — 1866'},
-      {x:8,y:2,k:'npc',id:'ghost',name:'Faded Surveyor'}
+      {x:8,y:2,k:'npc',id:'ghost',name:'Faded Surveyor'},
+      {x:2,y:2,k:'tombstone',id:'grave1',label:'Restless Grave'},
+      {x:4,y:2,k:'tombstone',id:'grave2',label:'Restless Grave'},
+      {x:6,y:2,k:'tombstone',id:'grave3',label:'Restless Grave'},
+      {x:12,y:2,k:'tombstone',id:'grave4',label:'Restless Grave'},
+      {x:14,y:2,k:'tombstone',id:'grave5',label:'Restless Grave'},
+      {x:16,y:2,k:'tombstone',id:'grave6',label:'Restless Grave'},
+      {x:9,y:4,k:'tombstone',id:'grave7',label:'Restless Grave'},
+      {x:11,y:4,k:'tombstone',id:'grave8',label:'Restless Grave'},
+      {x:10,y:6,k:'hiddenTombstone',id:'graveKey',label:'Mysterious Grave'},
+      {x:10,y:8,k:'enemy',id:'ghostBoss',hp:6, type:'wraith', boss:true}
     ],
     links:[
       {x:10, y:0, to:'mine', tx:10, ty:9.5, label:'MINE'},
@@ -701,7 +718,27 @@ function tryExit(){
     if(hit){
       // Gate: depths require switch
       if(L.to==='mine_depths' && !S.flags.mineSwitch){
-        toast('A sealed timber gate. Find a switch in the shaft.');
+        if(S.flags.mineRelic){
+          S.flags.mineSwitch = true;
+          SFX.portal(); SFX.success();
+          note('The relic activates the ancient switch — the depths are open.');
+          toast('The relic awakens the ancient mechanism. The depths open.');
+          save();
+        } else {
+          toast('A sealed timber gate. The creepy relic in the shaft may activate it.');
+          exitCd = 0.6;
+          return;
+        }
+      }
+      // Gate: mine entrance blocked by rocks until cleared with hammer
+      if(L.to==='mine' && !S.mineRocksCleared){
+        toast('Rocks block the mine entrance. Break them with your survey hammer.');
+        exitCd = 0.6;
+        return;
+      }
+      // Gate: haunted plains revealed only after mine boss defeated
+      if(L.to==='haunted' && !S.mineBossDefeated){
+        toast('A cold wind blocks the path. The mine depths hold a secret yet uncovered.');
         exitCd = 0.6;
         return;
       }
@@ -1004,6 +1041,22 @@ const CUTSCENES = {
       {art:'well', speaker: 'Narrator', text: 'The words settle in your bones. The stair waits. The mystery has only begun — and the ridge still holds the key.'}
     ]
   },
+  ghostBoss: {
+    id: 'ghostBoss',
+    pages: [
+      {speaker: 'Ghost Surveyor', art:'ghost', text: 'I am Jacques La Ramée. I measured these plains before the rails came. The Star-Well called me down, and I never returned.'},
+      {speaker: 'Ghost Surveyor', art:'ghost', text: 'The copper key rests with my remains. Defeat my echo, and it shall be yours.'},
+      {speaker: 'Narrator', art:'ghost', text: 'The ground splits open. A spectral boss rises from the grave — the Echo of La Ramée, bound to the haunted plains.'}
+    ]
+  },
+  wellChamber: {
+    id: 'wellChamber',
+    pages: [
+      {speaker: 'Narrator', art:'wellChamber', text: 'The Copper Key turns with a sound like a bell struck underground. The sealed door opens onto a stair that should not exist.'},
+      {speaker: 'The Voice', text: 'You have measured the land. Now measure the sky. The final survey begins.'},
+      {speaker: 'Narrator', text: 'You descend into the Understar Cavern. The Echo awaits.'}
+    ]
+  },
   door: {
     id: 'door',
     pages: [
@@ -1063,6 +1116,7 @@ function showCutscenePage(){
         else if(finished === 'well') toast('Seek the Wind Shrine on the ridge.');
         else if(finished === 'door') toast('Descend into the Understar Cavern…');
         else if(finished === 'ending') toast('Survey complete.');
+        else if(finished === 'ghostBoss'){ S.hauntedBossDefeated = true; save(); toast('The ghost surveyor is laid to rest. The copper key awaits at the mysterious grave.'); }
       }
     };
   }, 30);
@@ -1120,8 +1174,18 @@ function interact(){
       save(); break;
     case'well':
       if(!(S.stakeA&&S.stakeB)) dialog('The Old Well','<p>The rim is etched with markings that look almost like star positions. Your chain trembles, but you need both brass stakes to fix its true location.</p>','well');
-      else if(!S.heardWell){ S.heardWell=true; SFX.well(); note('The Star-Well answered with three tones. A stair of warm stone appeared. Something down there knows the survey.'); save(); setTimeout(()=>startCutscene('well'), 300); }
-      else dialog('The Star-Well','<p>The stair still descends. Whatever waits below remembers Jacques La Ramée — and it is waiting for the rest of the survey.</p>','well');
+      else if(!S.hasCopperKey) dialog('The Sealed Chamber','<p>The well rim is etched with star markings. A heavy iron door blocks the descent — it requires a Copper Key that you do not yet possess.</p>','well');
+      else if(!S.wellChamberUnlocked){ S.wellChamberUnlocked=true; SFX.well(); note('The Copper Key turns in the ancient lock. The chamber beneath the Star-Well opens.'); save(); setTimeout(()=>startCutscene('wellChamber'), 300); }
+      else {
+        // Descend into Understar Cavern for final boss
+        SFX.portal();
+        S.zone = 'underworld';
+        S.x = 10; S.y = 9.5;
+        exitCd = 1.2;
+        toast('Descending into the Star-Well Chamber…');
+        save();
+        burst(S.x*T, S.y*T, 12, '#a0c0ff');
+      }
       break;
     case'npc':
       if(o.id==='merchant'){
@@ -1134,6 +1198,23 @@ function interact(){
     case'sign': dialog(o.label||'Sign',`<p>Weathered wood reads: “${o.label}.” The wind carries the sound of a train that has not yet arrived, and something older beneath it.</p>`); break;
     case'build': dialog(o.label,`<p>Coal smoke, wet canvas, fresh timber. Locked for the night. The storm will keep everyone inside.</p>`); break;
     case'rock': dialog('Strange Stone','<p>Blue mineral threads the rock. Your compass needle points straight down. You mark it carefully in the field book.</p>'); note('A dark rock near camp bends the compass. The mineral is not on any of the Union Pacific charts.'); break;
+    case'mineRock':
+      if(o.id==='mineEntrance' && !S.mineRocksCleared){
+        if(!S.hasHammer){
+          dialog('Blocked Entrance','<p>A wall of packed rock and timber blocks the mine entrance. Your survey chain is not enough — you need the survey hammer from the railhead freight office.</p>');
+        } else {
+          S.mineRocksCleared = true;
+          S.opened['mineEntrance'] = true;
+          SFX.chest(); shake=6;
+          burst(o.x*T+16,o.y*T+16,14,'#8a8a70');
+          toast('Rocks cleared! The mine entrance is open.');
+          note('The mine entrance rocks have been cleared. The depths await.');
+          save();
+        }
+      } else {
+        toast('Already cleared.');
+      }
+      break;
     case'chest': openChest(o); break;
     case'shrine':
       if(!(S.stakeA&&S.stakeB)) dialog('Wind Shrine','<p>A stone marker in a ring of wind-carved rocks. It waits for a surveyor who can read the land and the sky.</p>','shrine');
@@ -1154,6 +1235,18 @@ function interact(){
       }
       break;
     case'fire': toast('Warmth against the high-plains wind and the coming storm.'); burst(o.x*T+16,o.y*T+10,6,'#ff8844'); break;
+    case'relic':
+      if(o.id==='mineRelic' && !S.flags.mineRelic){
+        S.flags.mineRelic = true;
+        SFX.success(); shake=5;
+        burst(o.x*T+16,o.y*T+16,14,'#a0a0ff');
+        toast('The creepy relic pulses with dark energy. The sealed chamber stirs.');
+        note('The creepy relic in the collapsed shaft awakens something ancient.');
+        save();
+      } else {
+        toast('The relic is silent now.');
+      }
+      break;
     case'rubble':
       if(S.opened['rubble_'+o.id]) toast('Already cleared.');
       else if(!S.hasHammer) toast('Packed rubble. A hammer could break it.');
@@ -1174,6 +1267,19 @@ function interact(){
       else dialog('Understar Pool','<p>Light without a source. The water (if it is water) reflects stars that are not in the sky above.</p><p>Something waits in this cavern — an echo of the surveyor who came before you.</p>','door');
       break;
     case'tent': toast('Canvas snaps in the rising wind.'); break;
+    case'tombstone':
+      if(o.id==='graveKey' && !S.hauntedBossDefeated){
+        dialog('Mysterious Grave','<p>The stone is cold and etched with a name you do not recognize. As you touch it, the ground trembles and a spectral figure rises from the earth.</p>','door');
+        setTimeout(()=>startCutscene('ghostBoss'), 500);
+        // The ghost boss enemy is already in the zone - player must defeat it with the hammer
+      } else if(o.id==='graveKey' && S.hauntedBossDefeated && !S.hasCopperKey){
+        dialog('The Grave Yields','<p>The ghost is laid to rest. Beneath the loosened soil, your hand finds a cold copper key, tarnished with age.</p>','door');
+        setTimeout(()=>{ S.hasCopperKey = true; SFX.success(); toast('Copper Key acquired!'); save(); }, 500);
+      } else {
+        toast('A silent grave. The name is worn away by time.');
+      }
+      break;
+    case'hiddenTombstone': toast('The earth here feels disturbed.'); break;
     default: toast('Interesting, but nothing more.');
   }
 }
@@ -1210,10 +1316,19 @@ function useTool(){
             S.flags.ending = true;
             save();
             setTimeout(()=>startCutscene('ending'), 800);
+          } else if(o.boss && o.id==='ghostBoss' && !S.hauntedBossDefeated){
+            S.hauntedBossDefeated = true;
+            note('The ghost surveyor is laid to rest.');
+            save();
+            SFX.success();
+            toast('The ghost boss fades. The copper key is revealed at the mysterious grave.');
           } else if(o.boss && o.id==='caveboss'){
             S.flags.mineBoss = true;
+            S.mineBossDefeated = true;
             note('Mine depths cleared. A compass waited in the dark.');
             save();
+            SFX.success();
+            toast('The mine guardian falls. A new path reveals itself beyond the rails.');
           } else save();
         }
       }
@@ -1308,10 +1423,33 @@ function drawTile(tx,ty,ch,biome){
       ctx.fillStyle='#5a4a30';
       ctx.fillRect(px, py+8, T, 3);
     }
+    // mine track rails running horizontally through center
+    if(Math.abs(ty-6)<=1){
+      ctx.fillStyle='#1a1a18';
+      ctx.fillRect(px+2,py+T/2-2,T-4,4);
+      ctx.fillStyle='#5a5a60';
+      ctx.fillRect(px+4,py+T/2-1,3,2);
+      ctx.fillRect(px+T-7,py+T/2-1,3,2);
+      ctx.fillStyle='#2a2a30';
+      ctx.fillRect(px+8,py+T/2+2,T-16,2);
+    }
     ctx.fillStyle=det;
     ctx.fillRect(px+8,py+14,4,3);
     ctx.fillRect(px+20,py+24,5,2);
   } else if(biome==='haunted'){
+    // haunted plains - ghost fog and darker ground
+    ctx.fillStyle=`rgba(80,120,100,${0.15+Math.sin(time+tx*0.5)*0.08})`;
+    ctx.fillRect(px,py,T,T);
+    if((tx*5+ty)%7===0){
+      ctx.fillStyle='rgba(140,180,160,0.2)';
+      ctx.fillRect(px+12,py+8,2,10);
+    }
+    // occasional ghostly glow
+    if((tx*3+ty*5)%9===0){
+      ctx.fillStyle=`rgba(180,200,255,${0.05+Math.sin(time*2+tx)*0.03})`;
+      ctx.fillRect(px+4,py+4,2,2);
+    }
+  } else if(biome==='canyon'){
     ctx.fillStyle=`rgba(80,120,100,${0.1+Math.sin(time+tx*0.5)*0.05})`;
     ctx.fillRect(px,py,T,T);
     if((tx*5+ty)%7===0){
@@ -1562,6 +1700,78 @@ function drawObj(o,t){
       ctx.fillRect(px+14*s, py+8*s + (on?6:0)*s, 12*s, 12*s);
       ctx.fillStyle = '#8a7a60';
       ctx.fillRect(px+18*s, py+4*s, 4*s, 8*s);
+      break;
+    }
+    case 'mineRock': {
+      // blocked mine entrance rocks
+      const cleared = S.mineRocksCleared || S.opened['mineEntrance'];
+      if(cleared) break;
+      ctx.fillStyle = '#4a4a58';
+      ctx.beginPath();
+      ctx.moveTo(px+4*s, py+34*s);
+      ctx.lineTo(px+10*s, py+8*s);
+      ctx.lineTo(px+32*s, py+6*s);
+      ctx.lineTo(px+36*s, py+34*s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a3a48';
+      ctx.fillRect(px+8*s, py+16*s, 8*s, 6*s);
+      ctx.fillRect(px+20*s, py+20*s, 10*s, 6*s);
+      ctx.fillStyle = '#5a5a60';
+      ctx.fillRect(px+6*s, py+28*s, 6*s, 3*s);
+      ctx.fillRect(px+26*s, py+24*s, 6*s, 3*s);
+      break;
+    }
+    case 'relic': {
+      // creepy mine relic
+      const pulse = 0.5 + Math.sin(t*3)*0.3;
+      ctx.fillStyle = `rgba(100,80,160,${0.3+pulse*0.2})`;
+      ctx.beginPath(); ctx.arc(px+20*s, py+18*s, 16*s, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#5a3a8a';
+      ctx.fillRect(px+8*s, py+14*s, 24*s, 18*s);
+      ctx.fillStyle = '#c8a0ff';
+      ctx.beginPath(); ctx.arc(px+20*s, py+10*s, 7*s, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#8060ff';
+      ctx.fillRect(px+15*s, py+8*s, 3*s, 3*s);
+      ctx.fillRect(px+22*s, py+8*s, 3*s, 3*s);
+      break;
+    }
+    case 'tombstone': {
+      // graveyard tombstone
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(px+8*s, py+32*s, 24*s, 4*s);
+      ctx.fillStyle = '#2a2a32';
+      ctx.beginPath();
+      ctx.moveTo(px+6*s, py+32*s);
+      ctx.lineTo(px+20*s, py+4*s);
+      ctx.lineTo(px+34*s, py+32*s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a3a48';
+      ctx.fillRect(px+16*s, py+26*s, 8*s, 6*s);
+      ctx.fillStyle = '#5a5a6a';
+      ctx.fillRect(px+16*s, py+26*s, 2*s, 6*s);
+      ctx.fillStyle = '#6a6a7a';
+      ctx.fillRect(px+18*s, py+26*s, 2*s, 6*s);
+      break;
+    }
+    case 'hiddenTombstone': {
+      // mysterious grave with copper key beneath
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(px+8*s, py+32*s, 24*s, 4*s);
+      ctx.fillStyle = '#2a2a32';
+      ctx.beginPath();
+      ctx.moveTo(px+6*s, py+32*s);
+      ctx.lineTo(px+20*s, py+4*s);
+      ctx.lineTo(px+34*s, py+32*s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a3a48';
+      ctx.fillRect(px+16*s, py+26*s, 8*s, 6*s);
+      ctx.fillStyle = '#8a6a32';
+      ctx.fillRect(px+14*s, py+18*s, 12*s, 8*s);
+      ctx.fillStyle = '#c4923a';
+      ctx.fillRect(px+16*s, py+22*s, 8*s, 4*s);
       break;
     }
     case 'starwell': {
