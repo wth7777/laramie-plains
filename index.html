@@ -108,7 +108,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v9.2 — detailed terrain · upgraded sprites · multi-room mine</footer>
+<footer>Star-Well Survey · v10.1 — map sprite sheet · shaped geography</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -253,6 +253,23 @@ function buildAtlas(){
 }
 // buildAtlas(); // disabled — using clean procedural sprites
 
+
+// Map sprite sheet (32x32 tiles)
+const mapSheet = new Image();
+mapSheet.src = 'sprites-map.png';
+let mapSheetReady = false;
+mapSheet.onload = ()=>{ mapSheetReady = true; };
+// Tile atlas index: [sheetCol, sheetRow] by char
+const TILE_ATLAS = {
+  'g': [0,0], 'd': [2,1], 'p': [4,1], 'w': [2,2], 'b': [1,7],
+  'f': [2,3], 'r': [2,4], 'c': [2,5], '#': [2,6], 'm': [5,7],
+  's': [2,8], 'h': [2,9]
+};
+function tileVar(tx,ty,baseCol,row){
+  // pick variant 0-3 from base col
+  const v = Math.abs((tx*3+ty*7)) % 4;
+  return [baseCol + (v%4), row];
+}
 
 // Sprite helpers
 function spr(sx, sy, dx, dy, dw=32, dh=32){
@@ -408,17 +425,31 @@ function stopMusic(){ musicOn=false; if(musicT) clearTimeout(musicT); }
 const zones = {
   camp: {
     name:'Survey Camp', biome:'prairie',
-    tiles: makeGrid('g'),
+    tiles: makeMap([
+      '##########d#########',
+      '#ffffggggdggggffffg#',
+      '#ffggggggdgggggggfg#',
+      '#gggggggddgggwwgggg#',
+      '#gggddgggdgggwwbggg#',
+      '#gggdggggdgggggbggg#',
+      '#ddddddddddddddgggg#',
+      '#gggdgggggggggggggg#',
+      '#gggdgggffffggggggg#',
+      '#ffffgggffffggggggg#',
+      '#ffffgggggggggggggg#',
+      '####################'
+    ]),
     objs: [
       {x:6,y:3,k:'sign',label:'Survey Camp'},
-      {x:10,y:5,k:'stake',id:'A'},
+      {x:9,y:5,k:'stake',id:'A'},
       {x:15,y:8,k:'stake',id:'B'},
-      {x:17,y:3,k:'well'},
-      {x:3,y:8,k:'npc',id:'mara',name:'Mara'},
+      {x:16,y:3,k:'well'},
+      {x:3,y:7,k:'npc',id:'mara',name:'Mara'},
       {x:8,y:7,k:'chest',id:'c1',item:'potion'},
       {x:12,y:2,k:'rock'},
       {x:5,y:4,k:'fire'},
-      {x:14,y:9,k:'tent'}
+      {x:14,y:9,k:'tent'},
+      {x:11,y:9,k:'landmark',label:'Camp Flag'}
     ],
     links:[
       {x:19, y:6, to:'town',  tx:2.5, ty:6,   label:'TOWN'},
@@ -427,15 +458,29 @@ const zones = {
   },
   town: {
     name:'Laramie Tent Town', biome:'town',
-    tiles: makeGrid('g'),
+    tiles: makeMap([
+      '####################',
+      '#ggffffffggffffffgg#',
+      '#ggggggggddgggggggg#',
+      '#gg###gggddggg###gg#',
+      '#gg###gggddggg###gg#',
+      '#ggggggggddgggggggg#',
+      'ddddddddddddddddddd#',
+      '#ggggggggddgggggggg#',
+      '#ggffffffddfffffggg#',
+      '#ggggggggddgggggggg#',
+      '#gggggggggggggggggg#',
+      '####################'
+    ]),
     objs: [
       {x:4,y:3,k:'build',label:'General Store'},
-      {x:12,y:3,k:'build',label:'Survey Office'},
+      {x:13,y:3,k:'build',label:'Survey Office'},
       {x:7,y:8,k:'npc',id:'louisa',name:'Louisa'},
-      {x:10,y:6,k:'npc',id:'merchant',name:'Tradesman Cole'},
+      {x:10,y:5,k:'npc',id:'merchant',name:'Tradesman Cole'},
       {x:15,y:7,k:'npc',id:'deputy',name:'Deputy'},
       {x:16,y:9,k:'chest',id:'c2',item:'coins'},
-      {x:3,y:9,k:'sign',label:'Notice Board'}
+      {x:3,y:9,k:'sign',label:'Notice Board'},
+      {x:10,y:2,k:'landmark',label:'Town Bell'}
     ],
     links:[
       {x:0,  y:6, to:'camp', tx:17.5, ty:6,   label:'CAMP'},
@@ -444,13 +489,27 @@ const zones = {
   },
   rail: {
     name:'End of the Rails', biome:'town',
-    tiles: makeGrid('g'),
+    tiles: makeMap([
+      '####################',
+      '#gggggggppppggggggg#',
+      '#gg###ggppppgg###gg#',
+      '#gg###ggppppgg###gg#',
+      '#gggggggppppggggggg#',
+      '#dddddddppppddddddd#',
+      'ddddddddppppddddddd#',
+      '#gggggggppppggggggg#',
+      '#ggffffffppppffffgg#',
+      '#gggggggppppggggggg#',
+      '#gggggggppppggggggg#',
+      '##########p#########'
+    ]),
     objs: [
-      {x:4,y:3,k:'build',label:'Freight Office'},
+      {x:4,y:2,k:'build',label:'Freight Office'},
       {x:9,y:7,k:'npc',id:'crowe',name:'Engineer Crowe'},
       {x:15,y:8,k:'enemy',id:'r1',hp:2},
       {x:16,y:4,k:'chest',id:'c3',item:'hammer'},
-      {x:11,y:2,k:'sign',label:'Tracks end'}
+      {x:11,y:1,k:'sign',label:'Tracks end'},
+      {x:10,y:5,k:'landmark',label:'Last Spike'}
     ],
     links:[
       {x:0,  y:6,  to:'town',  tx:17.5, ty:6,   label:'TOWN'},
@@ -459,13 +518,29 @@ const zones = {
   },
   ridge: {
     name:'Medicine Bow Ridge', biome:'ridge',
-    tiles: makeGrid('r'),
+    tiles: makeMap([
+      '##########r#########',
+      '###rrrrrrrrrrrrr####',
+      '###rrrpppppppprr####',
+      '##rrrpp#####pprr###',
+      '##rrpp#######pprr###',
+      '##rpp####s###pprr###',
+      'rpppp###########pprr',
+      '##rpp####ppppppprr##',
+      '##rrpp##pp####pprr##',
+      '###rrpppp######rrr##',
+      '####rrpppprrrrrr####',
+      '##########p#########'
+    ]),
     objs: [
       {x:10,y:5,k:'shrine'},
       {x:5,y:8,k:'enemy',id:'coy1',hp:1},
       {x:14,y:3,k:'enemy',id:'coy2',hp:1},
       {x:8,y:2,k:'chest',id:'c4',item:'coins'},
-      {x:16,y:9,k:'sign',label:'Canyon ahead'}
+      {x:16,y:9,k:'sign',label:'Canyon west'},
+      {x:10,y:2,k:'landmark',label:'Ridge Spire'},
+      {x:12,y:8,k:'rubble',id:'rb_ridge1'},
+      {x:3,y:4,k:'rock'}
     ],
     links:[
       {x:10, y:11, to:'camp',   tx:10,   ty:2.5, label:'CAMP'},
@@ -475,14 +550,30 @@ const zones = {
   },
   canyon: {
     name:'La Ramée Canyon', biome:'canyon',
-    tiles: makeGrid('c'),
+    tiles: makeMap([
+      '####################',
+      '##cccccccccccccc####',
+      '##cc###cccc##ccccc##',
+      '##cc###cwwc##cc##c##',
+      '##cccccbwwbcccc##c##',
+      '##cc###cwwc##ccccc##',
+      'cccc###cccc##cc##ccc',
+      '##ccccccc####ccccc##',
+      '##cc###cccccccccc###',
+      '##cc###cc###ccccc###',
+      '##cccccccccccccc####',
+      '####################'
+    ]),
     objs: [
       {x:10,y:5,k:'cave'},
       {x:6,y:8,k:'enemy',id:'ban1',hp:3},
-      {x:14,y:3,k:'chest',id:'c5',item:'coins'},
-      {x:4,y:4,k:'sign',label:'Understar Gate'},
+      {x:15,y:2,k:'chest',id:'c5',item:'coins'},
+      {x:4,y:9,k:'sign',label:'Understar Gate'},
+      {x:10,y:3,k:'landmark',label:'Red Arch'},
       {x:1,y:6,k:'mineRock',id:'mineEntrance',label:'Mine Entrance Blocked'},
-      {x:11,y:7,k:'wellRock',id:'wellEntrance',label:'Sealed Well Chamber'}
+      {x:11,y:7,k:'wellRock',id:'wellEntrance',label:'Sealed Well Chamber'},
+      {x:8,y:9,k:'rubble',id:'rb_cyn1'},
+      {x:9,y:9,k:'rubble',id:'rb_cyn2'}
     ],
     links:[
       {x:0, y:6, to:'mine', tx:2.5, ty:6, label:'MINE'},
@@ -604,6 +695,27 @@ function makeGrid(base){
   }
   return g;
 }
+// Hand-authored maps: # wall  g grass  d dirt  w water  b bridge  f forest  r rock  m mine  c canyon  s star  p path
+function makeMap(rows){
+  const g=[];
+  for(let y=0;y<ROWS;y++){
+    let inner = rows[y] || (' '.repeat(COLS));
+    if(inner.length < COLS) inner = inner.padEnd(COLS, ' ');
+    if(inner.length > COLS) inner = inner.slice(0, COLS);
+    let row = '';
+    for(let x=0;x<COLS;x++){
+      let ch = inner[x];
+      if(ch === ' ') ch = (x===0||y===0||x===COLS-1||y===ROWS-1) ? '#' : 'g';
+      if((x===0||y===0||x===COLS-1||y===ROWS-1) && ch!=='g' && ch!=='d' && ch!=='p' && ch!=='b' && ch!=='m' && ch!=='c' && ch!=='r' && ch!=='s' && ch!=='f') {
+        if(ch !== '#') { /* keep exit path chars */ }
+      }
+      if((x===0||y===0||x===COLS-1||y===ROWS-1) && (ch===' '||ch==='.')) ch='#';
+      row += ch;
+    }
+    g.push(row);
+  }
+  return g;
+}
 
 const NPC = {
   mara: [
@@ -699,7 +811,8 @@ function updateStorm(dt){
 // ---------- Movement (faster + sprint) ----------
 function solid(tx,ty){
   if(tx<0||ty<0||tx>=COLS||ty>=ROWS) return true;
-  if(Z().tiles[ty][tx]==='#') return true;
+  const ch = Z().tiles[ty][tx];
+  if(ch==='#' || ch==='w') return true; // wall or water
   // unbroken rubble blocks movement
   for(const o of Z().objs){
     if(o.k==='rubble' && !S.opened['rubble_'+o.id] && Math.floor(o.x)===tx && Math.floor(o.y)===ty) return true;
@@ -1198,6 +1311,7 @@ function interact(){
     case'sign': dialog(o.label||'Sign',`<p>Weathered wood reads: “${o.label}.” The wind carries the sound of a train that has not yet arrived, and something older beneath it.</p>`); break;
     case'build': dialog(o.label,`<p>Coal smoke, wet canvas, fresh timber. Locked for the night. The storm will keep everyone inside.</p>`); break;
     case'rock': dialog('Strange Stone','<p>Blue mineral threads the rock. Your compass needle points straight down. You mark it carefully in the field book.</p>'); note('A dark rock near camp bends the compass. The mineral is not on any of the Union Pacific charts.'); break;
+    case'landmark': toast(o.label || 'A landmark rises ahead.'); break;
     case'wellRock':
       if(o.id==='wellEntrance' && !S.wellRocksCleared){
         if(!S.hasHammer){
@@ -1435,7 +1549,47 @@ function lerpColor(a,b,t){
 function drawTile(tx,ty,ch,biome){
   const px=tx*T-camX, py=ty*T-camY;
   if(px<-T-12||py<-T-12||px>W+12||py>H+12) return;
-  if(ch=='#'){
+
+  // === Sprite sheet terrain ===
+  if(mapSheetReady){
+    let key = ch;
+    if(ch===' ' || ch==='.') key = 'g';
+    // biome fallbacks for generic fill tiles
+    if(key==='g' && biome==='ridge') key='r';
+    if(key==='g' && biome==='canyon') key='c';
+    if(key==='g' && biome==='mine') key='m';
+    if(key==='g' && biome==='star') key='s';
+    if(key==='g' && biome==='haunted') key='h';
+    const base = TILE_ATLAS[key] || TILE_ATLAS['g'];
+    let sc = base[0], sr = base[1];
+    // variants for grass/dirt/water/forest/rock
+    if(key==='g'){ const v=Math.abs(tx*3+ty*7)%4; sc=v; sr=0; }
+    else if(key==='d'||key==='p'){ const v=Math.abs(tx+ty*2)%4; sc=2+v; sr=1; }
+    else if(key==='w'){ const v=Math.abs(tx+Math.floor(time*2))%4; sc=v; sr=2; }
+    else if(key==='f'){ const v=Math.abs(tx*2+ty)%4; sc=v; sr=3; }
+    else if(key==='r'){ const v=Math.abs(tx+ty)%4; sc=v; sr=4; }
+    else if(key==='c'){ const v=Math.abs(tx*3+ty)%4; sc=v; sr=5; }
+    else if(key==='#'){ const v=Math.abs(tx+ty*3)%4; sc=v; sr=6; }
+    else if(key==='b'){ sc=Math.abs(tx)%4; sr=7; }
+    else if(key==='m'){ sc=4+Math.abs(tx+ty)%4; sr=7; }
+    else if(key==='s'){ sc=Math.abs(tx+ty)%8; sr=8; }
+    else if(key==='h'){ sc=Math.abs(tx*2+ty)%8; sr=9; }
+    ctx.drawImage(mapSheet, sc*32, sr*32, 32, 32, Math.floor(px), Math.floor(py), T+1, T+1);
+    // light grass sway overlay only for grass
+    if(key==='g' && (biome==='prairie'||biome==='town')){
+      const sway = Math.sin(time*2+tx*0.7+ty)*1.5;
+      ctx.strokeStyle='rgba(80,140,60,0.35)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(px+T*0.5, py+T*0.7);
+      ctx.lineTo(px+T*0.5+sway, py+T*0.45);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  // === Fallback procedural (sheet not loaded) ===
+  if(ch==='#'){
     const g = ctx.createLinearGradient(px, py, px, py+T);
     g.addColorStop(0, '#3a4558');
     g.addColorStop(0.4, '#2a3344');
@@ -1453,6 +1607,44 @@ function drawTile(tx,ty,ch,biome){
     ctx.stroke();
     ctx.fillStyle='rgba(255,255,255,0.06)';
     ctx.fillRect(px, py, T, 4);
+    return;
+  }
+
+  // Special terrain characters (from makeMap)
+  if(ch==='w'){ // water
+    const g = ctx.createLinearGradient(px, py, px, py+T);
+    g.addColorStop(0, '#2a5a8a'); g.addColorStop(0.5, '#1a4a7a'); g.addColorStop(1, '#0a3a6a');
+    ctx.fillStyle=g; ctx.fillRect(px-1,py-1,T+2,T+2);
+    ctx.strokeStyle='rgba(150,200,255,0.25)';
+    ctx.lineWidth=1;
+    const wy = py + T*0.4 + Math.sin(time*2+tx)*3;
+    ctx.beginPath(); ctx.moveTo(px, wy); ctx.bezierCurveTo(px+T*0.3, wy-2, px+T*0.7, wy+2, px+T, wy); ctx.stroke();
+    return;
+  }
+  if(ch==='b'){ // bridge over water look
+    ctx.fillStyle='#3a5a7a'; ctx.fillRect(px-1,py-1,T+2,T+2);
+    ctx.fillStyle='#6a4a28'; ctx.fillRect(px, py+T*0.25, T, T*0.5);
+    ctx.fillStyle='#5a3a18';
+    ctx.fillRect(px+2, py+T*0.25, 3, T*0.5);
+    ctx.fillRect(px+T-5, py+T*0.25, 3, T*0.5);
+    ctx.fillStyle='#8a6a40'; ctx.fillRect(px, py+T*0.45, T, 3);
+    return;
+  }
+  if(ch==='f'){ // forest floor
+    const g = ctx.createLinearGradient(px,py,px,py+T);
+    g.addColorStop(0,'#2a4a28'); g.addColorStop(1,'#1a3a20');
+    ctx.fillStyle=g; ctx.fillRect(px-1,py-1,T+2,T+2);
+    ctx.fillStyle='rgba(20,40,15,0.5)';
+    ctx.beginPath(); ctx.arc(px+T*0.3, py+T*0.4, 4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+T*0.7, py+T*0.6, 5, 0, Math.PI*2); ctx.fill();
+    return;
+  }
+  if(ch==='d'||ch==='p'){ // dirt / path
+    const g = ctx.createLinearGradient(px,py,px,py+T);
+    g.addColorStop(0,'#8a6a40'); g.addColorStop(1,'#6a4a30');
+    ctx.fillStyle=g; ctx.fillRect(px-1,py-1,T+2,T+2);
+    ctx.fillStyle='rgba(100,80,50,0.3)';
+    ctx.fillRect(px+2, py+T*0.4, T-4, T*0.2);
     return;
   }
 
@@ -1683,6 +1875,22 @@ function drawObj(o,t){
       ctx.fillStyle = '#c8a060';
       ctx.fillRect(px+6*s, py+18*s, 6*s, 6*s);
       ctx.fillRect(px+28*s, py+18*s, 6*s, 6*s);
+      break;
+    }
+    case 'landmark': {
+      // tall visible landmark
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.beginPath(); ctx.ellipse(px+20*s, py+36*s, 12*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#5a4a3a';
+      ctx.fillRect(px+16*s, py+8*s, 8*s, 28*s);
+      ctx.fillStyle = '#e0b45c';
+      ctx.beginPath();
+      ctx.moveTo(px+20*s, py+0*s);
+      ctx.lineTo(px+8*s, py+14*s);
+      ctx.lineTo(px+32*s, py+14*s);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c4923a';
+      ctx.fillRect(px+18*s, py+14*s, 4*s, 8*s);
       break;
     }
     case 'rock': {
