@@ -5,7 +5,7 @@ ctx.imageSmoothingEnabled=false;
 const atlas=new Image();atlas.src='sprites.png';
 const W=960,H=540,T=40,COLS=24,ROWS=13;
 const $=id=>document.getElementById(id);
-const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0,cameraZoom:1.22,cameraTarget:1.22,cameraX:240,cameraY:260,transitionTimer:0,cinematicTimer:0,sceneClock:0};
+const state={started:false,zone:'camp',x:5.5,y:6.5,dir:'down',hp:3,coins:0,stake:false,heard:false,tool:false,dialog:false,dialogQueue:[],step:0,inv:0,muted:false,keys:{},touch:{},lastMove:0,toastTimer:0,attack:0,attackCooldown:0,shake:0,particles:[],enemies:{},lastFrame:0,walkTime:0,sprint:false,cameraZoom:1.22,cameraTarget:1.22,cameraX:240,cameraY:260,transitionTimer:0,cinematicTimer:0,sceneClock:0};
 const zoneInfo={
  camp:{name:'Survey Camp',ground:'#b6a06a',seed:3,desc:'Canvas tents, supply crates, and the first survey marker.', exits:{right:{zone:'town',x:2.2,y:6.4,label:'TOWN',side:'right'},up:{zone:'ridge',x:12,y:10.5,label:'RIDGE',side:'up'}}},
  town:{name:'Laramie Tent Town',ground:'#9a875d',seed:7,desc:'A rough frontier settlement rises beside the old trail.',exits:{left:{zone:'camp',x:21.2,y:6.4,label:'CAMP',side:'left'},right:{zone:'railhead',x:2.2,y:6.5,label:'RAILHEAD',side:'right'},up:{zone:'ridge',x:13,y:10.5,label:'RIDGE',side:'up'}}},
@@ -50,7 +50,7 @@ function solid(tx,ty){if(tx<0||ty<0||tx>=COLS||ty>=ROWS)return true;const z=stat
  const obs=(objects[z]||[]).filter(o=>['tent','crate','building','building2','train','rock','shrine','well','portal','chest'].includes(o.type));
  return obs.some(o=>Math.abs(o.x-tx)<1&&Math.abs(o.y-ty)<1);
 }
-function move(dx,dy,dt=16){if(!state.started||state.dialog||!$('map-card').classList.contains('hidden'))return;const speed=3.25*(dt/1000);let nx=state.x+dx*speed,ny=state.y+dy*speed;if(dx)state.dir=dx<0?'left':'right';if(dy)state.dir=dy<0?'up':'down';if(!solid(Math.floor(nx),Math.floor(ny))){state.x=nx;state.y=ny;state.step++;state.walkTime+=dt;if(state.walkTime>210){sfx('step');state.walkTime=0;}}checkExit();}
+function move(dx,dy,dt=16){if(!state.started||state.dialog||!$('map-card').classList.contains('hidden'))return;if(dx&&dy){dx*=0.70710678;dy*=0.70710678}const sprintMult=(state.sprint&&state.sprint||false)?1.45:1;const speed=3.25*(dt/1000)*sprintMult;let nx=state.x+dx*speed,ny=state.y+dy*speed;if(dx)state.dir=dx<0?'left':'right';if(dy)state.dir=dy<0?'up':'down';const cx=[Math.floor(nx),Math.floor(nx+0.3)];const cy=[Math.floor(ny),Math.floor(ny+0.3)];const horzSafe=cx.every(cx=>!solid(cx,Math.floor(state.y)));const vertSafe=cy.every(cy=>!solid(Math.floor(state.x),cy));if(horzSafe)state.x=nx;if(vertSafe)state.y=ny;state.x=Math.max(0.55,Math.min(COLS-1.05,state.x));state.y=Math.max(0.55,Math.min(ROWS-1.05,state.y));state.step++;state.walkTime+=dt;if(state.walkTime>210){sfx('step');state.walkTime=0;}checkExit();}
 function checkExit(){const z=zoneInfo[state.zone].exits;let e=null;if(state.x<.62)e=z.left;if(state.x>COLS-.62)e=z.right;if(state.y<.62)e=z.up;if(state.y>ROWS-.62)e=z.down;if(e){state.zone=e.zone;state.x=e.x;state.y=e.y;state.cameraX=state.x*T+T/2;state.cameraY=state.y*T+T/2;state.inv=12;state.transitionTimer=.72;const wipe=$('transition-flash');wipe.classList.remove('active');void wipe.offsetWidth;wipe.classList.add('active');sfx('portal');toast('TRAIL OPEN: '+zoneInfo[state.zone].name);$('location').textContent=zoneInfo[state.zone].name;save();}}
 function interact(){if(state.dialog){closeDialog();return}if(!state.started)return;const o=nearby();if(!o){toast('Nothing nearby. Follow the gold trail markers to travel.');return}sfx('talk');
  if(o.type==='sign'){openDialog(o.name,signText());return}
@@ -158,7 +158,7 @@ function draw(){
  const targetY=Math.max(halfH,Math.min(H-halfH,wantedY));
  if(!Number.isFinite(state.cameraX))state.cameraX=targetX;
  if(!Number.isFinite(state.cameraY))state.cameraY=targetY;
- const follow=1-Math.exp(-9*(Math.min(40,(performance.now()-(state._camTick||performance.now())))/1000));
+ const follow=1-Math.exp(-6*(Math.min(50,(performance.now()-(state._camTick||performance.now())))/1000));
  state._camTick=performance.now();
  state.cameraX+=(targetX-state.cameraX)*follow;
  state.cameraY+=(targetY-state.cameraY)*follow;
@@ -211,8 +211,8 @@ function start(){state.started=true;state.cinematicTimer=3.2;state.cameraZoom=1.
 Three nights running, the Union Pacific rails have sung after midnight. Last night, a surveyor followed the sound into the dark — and did not return.
 
 You have been sent to find him. But the compass in your pocket is pointing somewhere no map has ever marked.`,()=>{toast('Find the survey stake. The gold trail marks exits.');});}
-document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='Escape'){closeDialog();closeMap();return}if(e.key===' '||e.key==='Enter'){interact();return}if(e.key.toLowerCase()==='x'){useTool();return}state.keys[e.key]=true;state.keys[e.key.toLowerCase()]=true});
-document.addEventListener('keyup',e=>{state.keys[e.key]=false;state.keys[e.key.toLowerCase()]=false});
+document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='Escape'){closeDialog();closeMap();return}if(e.key===' '||e.key==='Enter'){interact();return}if(e.key.toLowerCase()==='x'){useTool();return}if(e.key==='Shift'){state.sprint=true}state.keys[e.key]=true;state.keys[e.key.toLowerCase()]=true});
+document.addEventListener('keyup',e=>{state.keys[e.key]=false;state.keys[e.key.toLowerCase()]=false;if(e.key==='Shift'){state.sprint=false}});
 document.querySelectorAll('[data-dir]').forEach(b=>{
  const d=b.dataset.dir;
  b.addEventListener('contextmenu',e=>e.preventDefault());
