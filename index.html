@@ -30,7 +30,6 @@ header{width:min(100%,900px);padding:8px 12px 4px;display:flex;justify-content:s
 .abtn{display:flex;flex-direction:column;gap:6px}
 .abtn button{min-width:112px;padding:12px 14px;border:none;border-radius:10px;background:#2d5a4a;color:#e8f0e8;font-weight:600;font-size:12px;letter-spacing:.04em;touch-action:none}
 .abtn .sec{background:#2a3a4c}
-.abtn .sprint{background:#4a3a2a}
 .abtn .block{background:#2a3a4c;border-color:#6a8a9a;color:#a0d8ff}
 .abtn button:active{filter:brightness(1.12)}
 .menus{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 6px;justify-content:center}
@@ -75,13 +74,13 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
       <h1>LARAMIE<br>PLAINS</h1>
       <p>The Union Pacific has not yet reached these high plains. You arrive with a survey chain and a blank field book. Something under the old well is answering the measurements — and the storm is coming.</p>
       <button class="start" id="startBtn">BEGIN THE JOURNEY</button>
-      <p style="margin-top:12px;font-size:11px;opacity:.75">Cinematic opening · Sprint · Storm atmosphere · Deeper mystery<br>WASD / Arrows · Hold Shift to sprint · Space interact · X tool</p>
+      <p style="margin-top:12px;font-size:11px;opacity:.75">Cinematic opening · Storm atmosphere · Deeper mystery<br>WASD / Arrows · Space interact · X tool</p>
     </div>
   </div>
 </section>
 
 <section class="hud">
-  <div><span id="toolLabel">Survey chain</span> · <span id="sprintHint" style="color:#8a9a9a;font-size:11px">Hold Shift / Sprint</span></div>
+  <div><span id="toolLabel">Survey chain</span></div>
   <div class="obj" id="objective">Find the brass survey stakes near camp</div>
 </section>
 
@@ -95,7 +94,6 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <div class="abtn">
     <button id="interactBtn">INTERACT</button>
     <button class="sec" id="toolBtn">ATTACK</button>
-    <button class="sprint" id="sprintBtn">SPRINT</button>
     <button class="sec" id="dodgeBtn" style="background:#3a4a5a">DODGE</button>
     <button class="sec" id="blockBtn" style="background:#2a3a4c">BLOCK</button>
   </div>
@@ -108,7 +106,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v10.1 — map sprite sheet · shaped geography</footer>
+<footer>Star-Well Survey · v10.3 — cutscene portraits · sprite sheet terrain · shaped geography</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -286,7 +284,7 @@ function fresh() {
     stakeA: false, stakeB: false, heardWell: false, hasHammer: false, hasKey: false, hasMap: false,
     hasReinforce: false, hasCompass: false, hasLantern: false, hasBoots: false,
     opened: {}, flags: {}, notes: [], quests: {},
-    facing: 'down', anim: 0, invuln: 0, atk: 0, interactCd: 0, sprint: false, blocking: false,
+    facing: 'down', anim: 0, invuln: 0, atk: 0,    interactCd: 0, blocking: false,
     dodgeCd: 0, dodgeT: 0, dayT: 0.35,
     dmg: 1,
     mineRocksCleared: false,
@@ -808,7 +806,7 @@ function updateStorm(dt){
   });
 }
 
-// ---------- Movement (faster + sprint) ----------
+// ---------- Movement ----------
 function solid(tx,ty){
   if(tx<0||ty<0||tx>=COLS||ty>=ROWS) return true;
   const ch = Z().tiles[ty][tx];
@@ -862,6 +860,7 @@ function tryExit(){
       toast('Trail open: ' + zones[S.zone].name);
       save();
       burst(S.x*T, S.y*T, 8, '#e0b45c');
+      if(L.to==='mine' && !S.flags.mineEnterCS){ S.flags.mineEnterCS=true; save(); setTimeout(()=>startCutscene('mineEnter'),500); }
       return;
     }
   }
@@ -876,7 +875,6 @@ function move(dt){
   if(keys.ArrowDown||keys.s||touch.down) dy+=1;
   if(keys.ArrowLeft||keys.a||touch.left) dx-=1;
   if(keys.ArrowRight||keys.d||touch.right) dx+=1;
-  S.sprint = !!(keys.Shift||keys.shift||touch.sprint);
   S.blocking = !!(touch.block);
   // Dodge roll (Z or dodge button)
   if((keys.z||keys.Z||touch.dodge) && S.dodgeCd<=0 && S.dodgeT<=0){
@@ -894,8 +892,7 @@ function move(dt){
     const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
     if(Math.abs(dx)>Math.abs(dy)) S.dir = dx>0?'right':'left';
     else S.dir = dy>0?'down':'up';
-    // Base speed ~40% faster than original; sprint another +45%
-    const sp = (S.sprint ? 6.4 : 4.5) * (S.hasBoots && S.sprint ? 1.12 : 1);
+    const sp = 4.5;
     const nx=S.x+dx*sp*dt, ny=S.y+dy*sp*dt;
     if(!solid(Math.floor(nx),Math.floor(S.y))&&!solid(Math.floor(nx+0.3),Math.floor(S.y))&&
        !solid(Math.floor(nx),Math.floor(S.y+0.3))&&!solid(Math.floor(nx+0.3),Math.floor(S.y+0.3))) S.x=nx;
@@ -903,11 +900,11 @@ function move(dt){
        !solid(Math.floor(S.x),Math.floor(ny+0.3))&&!solid(Math.floor(S.x+0.3),Math.floor(ny+0.3))) S.y=ny;
     S.x = Math.max(0.55, Math.min(COLS-1.05, S.x));
     S.y = Math.max(0.55, Math.min(ROWS-1.05, S.y));
-    S.anim += dt * (S.sprint ? 18 : 13);
+    S.anim += dt * 13;
     footT -= dt;
     if(footT<=0){
       SFX.step();
-      footT = S.sprint ? 0.16 : 0.24;
+      footT = 0.24;
       if(Math.random()<0.5) spawn(S.x*T+16,S.y*T+30,{c:'#a09060',s:1.6,life:0.3});
     }
     tryExit();
@@ -1188,6 +1185,42 @@ const CUTSCENES = {
       {speaker: 'Narrator', text: 'Above, the storm breaks. Somewhere on the ridge, a survey stake still catches the first clear light of morning.'},
       {speaker: 'Narrator', text: '— THE END —\n\nThank you for surveying the Laramie Plains.'}
     ]
+  },
+  firstStake: {
+    id: 'firstStake',
+    pages: [
+      {speaker: 'Narrator', art:'stakes', text: 'The brass stake sinks into the prairie soil with a dull ring. Your field book notes the angle — then the needle on the compass drifts, just slightly, toward the old well.'},
+      {speaker: 'Narrator', art:'stakes', text: 'One measurement is never enough on these plains. Find its twin before the storm erases the marks.'}
+    ]
+  },
+  shrine: {
+    id: 'shrine',
+    pages: [
+      {speaker: 'Narrator', art:'shrine', text: 'Wind has worn the stone smooth. Carvings older than any rail charter catch the last light — three stars, a descending line, a circle like a well-mouth.'},
+      {speaker: 'Narrator', art:'shrine', text: 'A hidden shelf opens. Inside: a folded map and a compass that does not point north. The canyon trails are no longer a rumor.'},
+      {speaker: 'Narrator', art:'shrine', text: 'Whatever waits below the ridge has been waiting a long time. The map only shows you where to begin.'}
+    ]
+  },
+  keyFound: {
+    id: 'keyFound',
+    pages: [
+      {speaker: 'Narrator', art:'door', text: 'The key is heavy for its size, warm as if it had been held against a body. Brass, not iron — the same metal as the survey stakes.'},
+      {speaker: 'Narrator', art:'door', text: 'It will fit only one lock on these plains. You already know which door.'}
+    ]
+  },
+  mineEnter: {
+    id: 'mineEnter',
+    pages: [
+      {speaker: 'Narrator', art:'door', text: 'Timber creaks above the shaft. Company boards from 1864 still name the dig — then the names stop, mid-season, as if the clerks walked away and never returned.'},
+      {speaker: 'Narrator', art:'door', text: 'Rubble blocks the side drifts. Somewhere deeper, a mechanism waits. Bring a hammer. Watch the dark.'}
+    ]
+  },
+  mineClear: {
+    id: 'mineClear',
+    pages: [
+      {speaker: 'Narrator', art:'ending', text: 'The shaft guardian falls. Dust settles on rails that never carried a car. In the quiet you hear water — or something like water — further on.'},
+      {speaker: 'Narrator', art:'ending', text: 'A compass lies in the grit, glass cracked but the needle steady. Another tool for the work that remains.'}
+    ]
   }
 };
 
@@ -1202,19 +1235,16 @@ function showCutscenePage(){
   if(!cutscene) return;
   const pg = cutscene.pages[cutscene.page];
   const isLast = cutscene.page >= cutscene.pages.length - 1;
-  // pick art: page.art or cutscene id fallback
   const art = pg.art || cutscene.id || 'opening';
-  const body = `<canvas id="csArt" width="440" height="200" style="width:100%;height:auto;border-radius:8px;margin-bottom:12px;background:#0a1018;display:block"></canvas>
-    <div style="margin-bottom:8px"><span style="color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase">${pg.speaker}</span></div>
-    <p style="font-size:14px;line-height:1.55;margin-bottom:14px">${pg.text}</p>
-    <button id="csNext" style="background:var(--accent);border:none;color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">${isLast ? 'Continue' : 'Next'}</button>`;
+  const body = `\n    <canvas id="csArt" width="520" height="260" style="width:100%;height:auto;border-radius:10px;margin-bottom:12px;background:#0a1018;display:block;box-shadow:0 4px 20px rgba(0,0,0,.4)"></canvas>\n    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">\n      <canvas id="csPortrait" width="64" height="64" style="width:64px;height:64px;border-radius:8px;background:#152028;flex-shrink:0;border:1px solid #3a4a5a"></canvas>\n      <div style="flex:1">\n        <div style="color:var(--gold);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">${pg.speaker}</div>\n        <p style="font-size:14px;line-height:1.55;margin:0">${pg.text}</p>\n      </div>\n    </div>\n    <div style="display:flex;justify-content:space-between;align-items:center">\n      <span style="font-size:11px;color:var(--muted)">${cutscene.page+1} / ${cutscene.pages.length}</span>\n      <button id="csNext" style="background:linear-gradient(180deg,#4a9a7a,#2d6a5a);border:none;color:#fff;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.04em">${isLast ? 'Continue ▸' : 'Next ▸'}</button>\n    </div>`;
   $('modalTitle').textContent = '';
   $('modalBody').innerHTML = body;
   $('modal').classList.add('show');
-  // draw illustration
   setTimeout(()=>{
     const cv = document.getElementById('csArt');
     if(cv) drawIllustration(art, cv);
+    const por = document.getElementById('csPortrait');
+    if(por) drawPortrait(pg.speaker, por);
     const btn = document.getElementById('csNext');
     if(btn) btn.onclick = ()=>{
       if(cutscene.page < cutscene.pages.length - 1){
@@ -1230,19 +1260,76 @@ function showCutscenePage(){
         else if(finished === 'door') toast('Descend into the Understar Cavern…');
         else if(finished === 'ending') toast('Survey complete.');
         else if(finished === 'ghostBoss'){ S.hauntedBossDefeated = true; save(); toast('The ghost surveyor is laid to rest. The copper key awaits at the mysterious grave.'); }
+        else if(finished === 'firstStake') toast('Find the second stake.');
+        else if(finished === 'shrine') toast('The canyon is open.');
+        else if(finished === 'keyFound') toast('Seek the Understar Door.');
+        else if(finished === 'mineEnter') toast('Clear rubble. Find the switch.');
+        else if(finished === 'mineClear') toast('The depths are quiet… for now.');
       }
     };
   }, 30);
 }
 
 
+function drawPortrait(speaker, canvas){
+  const c = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  c.imageSmoothingEnabled = true;
+  const bg = c.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, '#1a2838'); bg.addColorStop(1, '#0e1820');
+  c.fillStyle = bg; c.fillRect(0,0,W,H);
+  const sp = (speaker||'').toLowerCase();
+  c.fillStyle = '#e8c8a0';
+  c.beginPath(); c.arc(W/2, H*0.42, 16, 0, Math.PI*2); c.fill();
+  if(sp.includes('mara')){
+    c.fillStyle = '#3d6a5a'; c.fillRect(W/2-12, H*0.55, 24, 20);
+    c.fillStyle = '#2a4a3a'; c.fillRect(W/2-14, H*0.28, 28, 8);
+    c.fillStyle = '#1a1a1a';
+    c.beginPath(); c.arc(W/2-6, H*0.4, 2, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(W/2+6, H*0.4, 2, 0, Math.PI*2); c.fill();
+  } else if(sp.includes('voice')){
+    c.fillStyle = '#2a3a6a';
+    c.beginPath(); c.arc(W/2, H*0.42, 18, 0, Math.PI*2); c.fill();
+    c.fillStyle = 'rgba(100,160,255,0.5)';
+    c.beginPath(); c.arc(W/2, H*0.42, 12, 0, Math.PI*2); c.fill();
+    c.fillStyle = '#80c0ff';
+    c.beginPath(); c.arc(W/2-5, H*0.38, 3, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(W/2+5, H*0.38, 3, 0, Math.PI*2); c.fill();
+  } else if(sp.includes('narrator') || sp.includes('end') || sp.includes('surveyor')){
+    c.fillStyle = '#2a6a8a'; c.fillRect(W/2-11, H*0.55, 22, 18);
+    c.fillStyle = '#2a1e14';
+    c.beginPath(); c.ellipse(W/2, H*0.32, 14, 5, 0, 0, Math.PI*2); c.fill();
+    c.fillRect(W/2-8, H*0.22, 16, 10);
+    c.fillStyle = '#1a1a1a';
+    c.beginPath(); c.arc(W/2-5, H*0.4, 2, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(W/2+5, H*0.4, 2, 0, Math.PI*2); c.fill();
+  } else if(sp.includes('ghost') || sp.includes('ram') || sp.includes('haunted')) {
+    c.fillStyle = '#4a5a6a'; c.fillRect(W/2-12, H*0.55, 24, 20);
+    c.fillStyle = '#80a0c0';
+    c.beginPath(); c.arc(W/2, H*0.42, 17, 0, Math.PI*2); c.fill();
+    c.fillStyle = 'rgba(160,200,255,0.4)';
+    c.beginPath(); c.arc(W/2-6, H*0.38, 3, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(W/2+6, H*0.38, 3, 0, Math.PI*2); c.fill();
+  } else if(sp.includes('louisa')) {
+    c.fillStyle = '#6a4a5a'; c.fillRect(W/2-11, H*0.55, 22, 18);
+    c.fillStyle = '#d080a0';
+    c.beginPath(); c.arc(W/2, H*0.42, 15, 0, Math.PI*2); c.fill();
+  } else {
+    c.fillStyle = '#3a5a4a'; c.fillRect(W/2-11, H*0.55, 22, 18);
+    c.fillStyle = '#4a3a2a';
+    c.fillRect(W/2-12, H*0.28, 24, 7);
+    c.fillStyle = '#1a1a1a';
+    c.beginPath(); c.arc(W/2-5, H*0.4, 2, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(W/2+5, H*0.4, 2, 0, Math.PI*2); c.fill();
+  }
+}
 
-function openShop(){
+function openShop() {
   const items = [
     {id:'heal', name:'Healing tonic', cost:12, desc:'Restore 2 hearts'},
     {id:'reinforce', name:'Reinforced hammer', cost:30, desc:'Double strike damage'},
     {id:'compass', name:"Surveyor's compass", cost:25, desc:'Hints at hidden paths'},
-    {id:'boots', name:'Trail boots', cost:20, desc:'Slightly faster sprint'}
+    {id:'boots', name:'Trail boots', cost:20, desc:'Tread the prairie longer'}
   ];
   let html = '<p style="margin-bottom:8px;color:var(--muted)">Tradesman Cole — brass and beans</p><ul style="list-style:none;padding:0">';
   for(const it of items){
@@ -1280,8 +1367,8 @@ function interact(){
   if(!o){ toast('Nothing close enough.'); return; }
   switch(o.k){
     case'stake':
-      if(o.id==='A'&&!S.stakeA){ S.stakeA=true; note('Brass stake A recovered. The coordinates refuse to match any star chart I know.'); SFX.stake(); burst(o.x*T+16,o.y*T+16,14,'#e0b45c'); toast('Survey stake A secured!'); }
-      else if(o.id==='B'&&!S.stakeB){ S.stakeB=true; note('Brass stake B recovered. Together they form a line that ends beneath the old well.'); SFX.stake(); burst(o.x*T+16,o.y*T+16,14,'#e0b45c'); toast('Survey stake B secured!'); }
+      if(o.id==='A'&&!S.stakeA){ S.stakeA=true; note('Brass stake A recovered. The coordinates refuse to match any star chart I know.'); SFX.stake(); burst(o.x*T+16,o.y*T+16,14,'#e0b45c'); toast('Survey stake A secured!'); if(!S.flags.firstStakeCS){ S.flags.firstStakeCS=true; setTimeout(()=>startCutscene('firstStake'),400);} }
+      else if(o.id==='B'&&!S.stakeB){ S.stakeB=true; note('Brass stake B recovered. Together they form a line that ends beneath the old well.'); SFX.stake(); burst(o.x*T+16,o.y*T+16,14,'#e0b45c'); toast('Survey stake B secured!'); if(!S.flags.firstStakeCS){ S.flags.firstStakeCS=true; setTimeout(()=>startCutscene('firstStake'),400);} }
       else toast('Already recorded.');
       if(S.stakeA&&S.stakeB&&!S.flags.stakesCS){ S.flags.stakesCS=true; note('Both stakes point to the same impossible place: under the Star-Well.'); SFX.success(); setTimeout(()=>startCutscene('stakes'), 500); }
       save(); break;
@@ -1349,7 +1436,7 @@ function interact(){
     case'chest': openChest(o); break;
     case'shrine':
       if(!(S.stakeA&&S.stakeB)) dialog('Wind Shrine','<p>A stone marker in a ring of wind-carved rocks. It waits for a surveyor who can read the land and the sky.</p>','shrine');
-      else if(!S.hasMap){ S.hasMap=true; SFX.success(); note('The shrine grants map and compass. The old survey lines reveal the path into La Ramée Canyon.'); dialog('Wind Shrine','<p>The stakes align with the ridge. A hidden compartment opens: an old map and a compass that does not point north.</p><p>Canyon trails are now clear.</p>','shrine'); save(); }
+      else if(!S.hasMap){ S.hasMap=true; SFX.success(); note('The shrine grants map and compass. The old survey lines reveal the path into La Ramée Canyon.'); dialog('Wind Shrine','<p>The stakes align with the ridge. A hidden compartment opens: an old map and a compass that does not point north.</p><p>Canyon trails are now clear.</p>','shrine'); save(); if(!S.flags.shrineCS){ S.flags.shrineCS=true; setTimeout(()=>startCutscene('shrine'),300);} }
       else toast('The shrine is quiet. The map is yours.'); break;
     case'cave':
       if(!S.hasKey) dialog('Sealed Door','<p>A brass lock, not iron. The metal is warm. You need a key that matches the survey.</p>','door');
@@ -1421,7 +1508,7 @@ function openChest(o){
   if(o.item==='potion'){ S.hp=Math.min(S.maxHp,S.hp+2); msg+='a healing draught.'; }
   else if(o.item==='coins'){ const n=12+Math.floor(Math.random()*10); S.coins+=n; msg+=`a purse (+${n} coins).`; }
   else if(o.item==='hammer'){ S.hasHammer=true; msg+='a heavy survey hammer! Tool now attacks.'; note('Survey hammer recovered at the railhead. The weight feels right in the hand.'); }
-  else if(o.item==='key'){ S.hasKey=true; msg+='a heavy brass key, still warm.'; note('Brass key found on the ridge. It matches no lock in camp.'); }
+  else if(o.item==='key'){ S.hasKey=true; msg+='a heavy brass key, still warm.'; note('Brass key found on the ridge. It matches no lock in camp.'); if(!S.flags.keyCS){ S.flags.keyCS=true; setTimeout(()=>startCutscene('keyFound'),500);} }
   else if(o.item==='reinforce'){ S.hasReinforce=true; S.dmg=2; msg+='a reinforced hammer head! Damage increased.'; note('Reinforced hammer fitted. Strikes land harder.'); }
   else if(o.item==='lantern'){ S.hasLantern=true; msg+='a star lantern. Hidden things may show.'; note('Star lantern recovered on the Haunted Plains.'); }
   else if(o.item==='compass'){ S.hasCompass=true; msg+='a surveyor\'s compass!'; note('Compass found in the mine depths.'); }
@@ -1460,6 +1547,7 @@ function useTool(){
             save();
             SFX.success();
             toast('The mine guardian falls. A new path reveals itself beyond the rails.');
+            if(!S.flags.mineClearCS){ S.flags.mineClearCS=true; setTimeout(()=>startCutscene('mineClear'),600); }
           } else save();
         }
       }
@@ -2318,10 +2406,6 @@ function drawPlayer(t){
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.beginPath(); ctx.arc(px+16*s, py+16*s, 3*s, 0, Math.PI*2); ctx.fill();
   }
-
-  if(S.sprint && (keys.ArrowUp||keys.w||keys.ArrowDown||keys.s||keys.ArrowLeft||keys.a||keys.ArrowRight||keys.d||touch.up||touch.down||touch.left||touch.right)){
-    if(Math.random() < 0.4) spawn(px+16*s, py+35*s, {c:'#c0b080', s:2*s, life:0.25, vy:-8});
-  }
   if(S.atk > 0 && S.hasHammer){
     ctx.strokeStyle = `rgba(230,210,170,${S.atk*2.2})`;
     ctx.lineWidth = 2.5*s;
@@ -2636,14 +2720,11 @@ $('startBtn').onclick=()=>{
     save();
     setTimeout(()=>startCutscene('opening'), 400);
   } else {
-    toast('Find the survey stakes. Gold frames mark exits. Hold Shift to sprint.');
+    toast('Find the survey stakes. Gold frames mark exits.');
   }
 };
 $('interactBtn').onclick=()=>{ resume(); interact(); };
 $('toolBtn').onclick=()=>{ resume(); useTool(); };
-$('sprintBtn').addEventListener('pointerdown',e=>{ e.preventDefault(); touch.sprint=true; resume(); });
-$('sprintBtn').addEventListener('pointerup',()=>touch.sprint=false);
-$('sprintBtn').addEventListener('pointercancel',()=>touch.sprint=false);
 const dodgeBtn = $('dodgeBtn');
 if(dodgeBtn){
   dodgeBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); touch.dodge=true; resume(); });
@@ -2681,7 +2762,6 @@ $('bagBtn').onclick=()=>{
 $('helpBtn').onclick=()=>{
   dialog('How to Play',`<p>Explore 1867 Laramie Plains. Recover the survey stakes, unlock the Star-Well, and discover what lies beneath.</p>
   <ul><li><b>Move</b> WASD / Arrows / D-pad</li>
-  <li><b>Sprint</b> Hold Shift or Sprint button</li>
   <li><b>Dodge</b> Z or Dodge button (i-frames)</li>
   <li><b>Block</b> hold Block button to reduce damage</li>
   <li><b>Interact</b> Space / Enter / button</li>
