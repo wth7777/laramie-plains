@@ -106,7 +106,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v11 — ChatGPT character sheet · sprite-based characters · cinematic intro</footer>
+<footer>Star-Well Survey · v11.1 — fixed sprite borders · clean frames · surveyor style</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -1902,10 +1902,11 @@ function drawObj(o,t){
     }
     case 'well': {
       if(sprWell.complete && sprWell.naturalWidth>0){
-        const cols=4, rows=2;
-        const fw=Math.floor(sprWell.naturalWidth/cols), fh=Math.floor(sprWell.naturalHeight/rows);
-        const frame = (S.stakeA&&S.stakeB) ? 3 : Math.floor(t*2)%3;
-        ctx.drawImage(sprWell, (frame%cols)*fw, 0, fw, fh, px, py, 40*s, 40*s);
+        // Center crop — one clean well, no border scroll
+        const sw=Math.min(120, Math.floor(sprWell.naturalWidth/2));
+        const sh=Math.min(140, sprWell.naturalHeight-10);
+        const sx=Math.floor(sprWell.naturalWidth/2-sw/2);
+        ctx.drawImage(sprWell, sx, 5, sw, sh, px-2*s, py-4*s, 42*s, 42*s);
         break;
       }
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -1936,10 +1937,13 @@ function drawObj(o,t){
       else if(o.id==='ghost') npcImg = sprGhost;
       else if(o.id==='merchant'||o.id==='crowe') npcImg = sprTownMan;
       if(npcImg && npcImg.complete && npcImg.naturalWidth>0){
-        const fw=Math.floor(npcImg.naturalWidth/6), fh=Math.floor(npcImg.naturalHeight/2);
-        const fr=Math.floor(t*3)%6;
+        // Use one clean center region — avoid scrolling through panel chrome
+        const sw = Math.min(64, Math.floor(npcImg.naturalWidth/4));
+        const sh = Math.min(80, Math.floor(npcImg.naturalHeight/2));
+        const sx = Math.floor(npcImg.naturalWidth/2 - sw/2);
+        const sy = Math.floor(npcImg.naturalHeight/2 - sh/2);
         if(o.id==='ghost') ctx.globalAlpha=0.7;
-        ctx.drawImage(npcImg, fr*fw, 0, fw, fh, px, py, 36*s, 40*s);
+        ctx.drawImage(npcImg, sx, sy, sw, sh, px, py, 34*s, 38*s);
         ctx.globalAlpha=1;
         if(near(o, 2.2)){
           ctx.fillStyle='rgba(8,12,18,0.75)';
@@ -2045,26 +2049,30 @@ function drawObj(o,t){
       break;
     }
     case 'enemy': {
-      // Sheet-based enemies when available
+      // Sheet-based enemies when available — center crop, no border scroll
       if(o.boss && o.id==='caveboss' && sprMineB.complete && sprMineB.naturalWidth>0){
-        const fw=Math.floor(sprMineB.naturalWidth/4), fh=Math.floor(sprMineB.naturalHeight/2);
-        const fr=Math.floor(t*6)%4;
-        ctx.drawImage(sprMineB, fr*fw, 0, fw, fh, px, py-10*s, 48*s, 48*s);
+        const sw=Math.min(100, Math.floor(sprMineB.naturalWidth/2));
+        const sh=Math.min(100, Math.floor(sprMineB.naturalHeight/2));
+        const sx=Math.floor(sprMineB.naturalWidth/2-sw/2);
+        ctx.drawImage(sprMineB, sx, 5, sw, sh, px-4*s, py-8*s, 44*s, 44*s);
         ctx.fillStyle='#e07060';
         for(let i=0;i<(o.hp||0);i++) ctx.fillRect(px+4*s+i*6*s, py-14*s, 5*s, 3*s);
         break;
       }
       if(o.type==='cave' && sprMineC.complete && sprMineC.naturalWidth>0){
-        const fw=Math.floor(sprMineC.naturalWidth/4), fh=Math.floor(sprMineC.naturalHeight/3);
-        const fr=Math.floor(t*8)%4;
-        ctx.drawImage(sprMineC, fr*fw, 0, fw, fh, px+2*s, py+4*s, 36*s, 36*s);
+        const sw=Math.min(80, Math.floor(sprMineC.naturalWidth/3));
+        const sh=Math.min(80, Math.floor(sprMineC.naturalHeight/2));
+        const sx=Math.floor(sprMineC.naturalWidth/2-sw/2);
+        const sy=10;
+        ctx.drawImage(sprMineC, sx, sy, sw, sh, px, py, 36*s, 36*s);
         break;
       }
       if(o.type==='wraith' && sprGhost.complete && sprGhost.naturalWidth>0){
-        const fw=Math.floor(sprGhost.naturalWidth/6), fh=Math.floor(sprGhost.naturalHeight/2);
-        const fr=Math.floor(t*6)%6;
+        const sw=Math.min(70, Math.floor(sprGhost.naturalWidth/3));
+        const sh=Math.min(90, Math.floor(sprGhost.naturalHeight/2));
+        const sx=Math.floor(sprGhost.naturalWidth/2-sw/2);
         ctx.globalAlpha=0.75;
-        ctx.drawImage(sprGhost, fr*fw, 0, fw, fh, px, py, 40*s, 40*s);
+        ctx.drawImage(sprGhost, sx, 5, sw, sh, px, py, 36*s, 40*s);
         ctx.globalAlpha=1;
         break;
       }
@@ -2362,166 +2370,129 @@ function drawPlayer(t){
   const py = S.y*T - camY;
   const s = SPR;
 
-  // Try ChatGPT surveyor sprite frames (6x2 grid in spr-surveyor.png)
-  if(sprSurveyor.complete && sprSurveyor.naturalWidth > 0){
-    const fw = Math.floor(sprSurveyor.naturalWidth / 6);
-    const fh = Math.floor(sprSurveyor.naturalHeight / 2);
-    let row = 0, col = 0;
-    // map dir + walk to frames
-    const moving = Math.hypot(S.vx||0, S.vy||0) > 0.05 || S.anim > 0;
-    const frame = moving ? (Math.floor(S.anim) % 6) : 0;
-    if(S.dir==='down'){ row=0; col=frame; }
-    else if(S.dir==='right'){ row=0; col=Math.min(5, frame); }
-    else if(S.dir==='left'){ row=1; col=Math.min(5, frame); }
-    else { row=1; col=frame; } // up
-    if(S.atk>0) col = 5; // last frame as attack-ish
-    // shadow
-    ctx.fillStyle='rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.ellipse(px+16*s, py+36*s, 12*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
-    if(S.invuln>0 && Math.floor(t*12)%2===0) ctx.globalAlpha=0.4;
-    if(S.dodgeT>0) ctx.globalAlpha=0.55;
-    const dw = 36*s, dh = 40*s;
-    ctx.drawImage(sprSurveyor, col*fw, row*fh, fw, fh, px+16*s-dw/2, py+36*s-dh, dw, dh);
-    ctx.globalAlpha=1;
-    if(S.atk>0 && S.hasHammer){
-      ctx.strokeStyle=`rgba(255,230,180,${S.atk*2})`;
-      ctx.lineWidth=2.5*s;
-      ctx.beginPath();
-      ctx.arc(px+16*s, py+18*s, 18*s, 0, Math.PI*1.2);
-      ctx.stroke();
-    }
-    return;
-  }
+  // Character drawn in ChatGPT surveyor style (clean, no sheet border artifacts)
 
-  const walk = Math.sin(S.anim * 1.15) * 2 * s;
-  const stride = Math.sin(S.anim * 1.15);
+  const walk = Math.sin(S.anim * 1.2) * 2.2 * s;
+  const stride = Math.sin(S.anim * 1.2);
+  const bob = Math.abs(Math.sin(S.anim * 1.2)) * 1.2 * s;
   const dodging = S.dodgeT > 0;
+  const sun = _frameSun || { dx: 0.5, dy: 0.3, strength: 0.7, col:[1,0.95,0.85], angle: 0.5 };
 
   if(S.invuln > 0 && Math.floor(t*12)%2===0) ctx.globalAlpha = 0.4;
-  if(dodging) ctx.globalAlpha = 0.6;
+  if(dodging) ctx.globalAlpha = 0.55;
 
-  // contact shadow (elongated opposite sun)
-  const sunS = _frameSun || { dx: 0.4, dy: 0.4, strength: 0.7 };
-  ctx.fillStyle = `rgba(0,0,0,${0.28 + sunS.strength*0.08})`;
+  // shadow
+  ctx.fillStyle = `rgba(0,0,0,${0.3+sun.strength*0.08})`;
   ctx.beginPath();
-  ctx.ellipse(px+16*s - sunS.dx*4*s, py+36*s - sunS.dy*2*s, 12*s + sunS.strength*3, 4.5*s, sunS.dx*0.3, 0, Math.PI*2);
+  ctx.ellipse(px+16*s - sun.dx*3*s, py+37*s, 11*s, 4*s, 0, 0, Math.PI*2);
   ctx.fill();
 
   // legs
-  const la = stride * 3.2 * s, lb = -stride * 3.2 * s;
-  ctx.fillStyle = '#1a2030';
+  const la = stride * 3.5 * s, lb = -stride * 3.5 * s;
+  ctx.fillStyle = '#1a2230';
   if(S.dir==='left'||S.dir==='right'){
-    roundRect(ctx, px+10*s, py+26*s, 6*s, 9*s, 2*s);
-    roundRect(ctx, px+18*s, py+26*s, 6*s, 9*s, 2*s);
+    roundRect(ctx, px+10*s, py+27*s, 6*s, 8*s, 2*s);
+    roundRect(ctx, px+18*s, py+27*s, 6*s, 8*s, 2*s);
   } else {
-    roundRect(ctx, px+10*s, py+26*s+(la>0?0:la*0.2), 6*s, 9*s+Math.abs(la)*0.2, 2*s);
-    roundRect(ctx, px+18*s, py+26*s+(lb>0?0:lb*0.2), 6*s, 9*s+Math.abs(lb)*0.2, 2*s);
+    roundRect(ctx, px+10*s, py+27*s+(la>0?0:la*0.25), 6*s, 8*s+Math.abs(la)*0.25, 2*s);
+    roundRect(ctx, px+18*s, py+27*s+(lb>0?0:lb*0.25), 6*s, 8*s+Math.abs(lb)*0.25, 2*s);
   }
-  // boot leather highlight
-  ctx.fillStyle = '#2e3548';
-  ctx.beginPath(); ctx.ellipse(px+13*s, py+34.5*s, 4*s, 2*s, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(px+21*s, py+34.5*s, 4*s, 2*s, 0, 0, Math.PI*2); ctx.fill();
+  // boots
+  ctx.fillStyle = '#2e3848';
+  ctx.beginPath(); ctx.ellipse(px+13*s, py+35*s, 4.5*s, 2.2*s, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(px+21*s, py+35*s, 4.5*s, 2.2*s, 0, 0, Math.PI*2); ctx.fill();
 
-  // coat with directional light from sun
-  const sun = _frameSun || { dx: 0.5, dy: 0.3, strength: 0.7, col:[1,0.95,0.85] };
-  const coatG = ctx.createLinearGradient(
-    px+8*s - sun.dx*10*s, py+13*s - sun.dy*6*s,
-    px+26*s + sun.dx*10*s, py+27*s + sun.dy*6*s
-  );
-  coatG.addColorStop(0, '#3a8ab0');
-  coatG.addColorStop(0.45, '#2a7a9a');
-  coatG.addColorStop(1, '#153a58');
+  // body coat with richer gradient
+  const coatG = ctx.createLinearGradient(px+8*s, py+12*s, px+26*s, py+28*s);
+  coatG.addColorStop(0, '#a06838');
+  coatG.addColorStop(0.4, '#8a5528');
+  coatG.addColorStop(1, '#5a3418');
   ctx.fillStyle = coatG;
-  roundRect(ctx, px+8*s, py+13*s+walk*0.3, 18*s, 14*s, 4*s);
-  // rim light on lit edge
-  ctx.strokeStyle = `rgba(${sun.col[0]*255|0},${sun.col[1]*220|0},${sun.col[2]*200|0},${0.25*sun.strength})`;
-  ctx.lineWidth = 1.5*s;
-  ctx.beginPath();
-  ctx.arc(px+17*s, py+20*s+walk*0.3, 11*s, sun.angle || 0, (sun.angle||0)+1.2);
-  ctx.stroke();
-  // collar
-  ctx.fillStyle = '#163d58';
-  roundRect(ctx, px+9*s, py+13*s+walk*0.3, 16*s, 3.5*s, 2*s);
-  // belt + buckle
-  ctx.fillStyle = '#4a3020';
-  ctx.fillRect(px+9*s, py+24*s+walk*0.3, 16*s, 2.8*s);
-  ctx.fillStyle = '#e0b45c';
-  ctx.beginPath(); ctx.arc(px+17*s, py+25.4*s+walk*0.3, 2.4*s, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#c4923a';
-  ctx.beginPath(); ctx.arc(px+17*s, py+25.4*s+walk*0.3, 1.2*s, 0, Math.PI*2); ctx.fill();
+  roundRect(ctx, px+8*s, py+13*s + walk*0.25 - bob*0.1, 18*s, 14*s, 5*s);
+  // scarf / collar accent (readable Zelda-like color pop)
+  ctx.fillStyle = '#c45a3a';
+  roundRect(ctx, px+10*s, py+13*s + walk*0.25, 14*s, 3.5*s, 1.5*s);
+  // belt
+  ctx.fillStyle = '#3a2818';
+  ctx.fillRect(px+9*s, py+24.5*s + walk*0.25, 16*s, 2.5*s);
+  ctx.fillStyle = '#e8c050';
+  ctx.beginPath(); ctx.arc(px+17*s, py+25.8*s + walk*0.25, 2.5*s, 0, Math.PI*2); ctx.fill();
 
-  // head with cheek shade
-  const headG = ctx.createRadialGradient(px+15*s, py+7*s+walk*0.2, 1, px+17*s, py+9*s, 8*s);
-  headG.addColorStop(0, '#f5dcb8');
-  headG.addColorStop(1, '#d4b08a');
+  // head
+  const headY = py+9*s + walk*0.2 - bob*0.15;
+  const headG = ctx.createRadialGradient(px+15*s, headY-2*s, 1, px+17*s, headY, 8*s);
+  headG.addColorStop(0, '#ffe4c0');
+  headG.addColorStop(1, '#d4a878');
   ctx.fillStyle = headG;
-  ctx.beginPath(); ctx.arc(px+17*s, py+9*s+walk*0.2, 7.3*s, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px+17*s, headY, 7.5*s, 0, Math.PI*2); ctx.fill();
 
-  // frontier hat with brim ellipse + crown
+  // hair tuft under hat
+  ctx.fillStyle = '#3a2a1a';
+  ctx.beginPath(); ctx.arc(px+17*s, headY-4*s, 5*s, Math.PI, 0); ctx.fill();
+
+  // hat
   ctx.fillStyle = '#2a1e14';
-  ctx.beginPath(); ctx.ellipse(px+17*s, py+5.5*s+walk*0.2, 12.5*s, 3.2*s, 0, 0, Math.PI*2); ctx.fill();
-  const hatG = ctx.createLinearGradient(px+10*s, py, px+24*s, py);
-  hatG.addColorStop(0, '#2a1e14'); hatG.addColorStop(0.5, '#3d2e20'); hatG.addColorStop(1, '#2a1e14');
+  ctx.beginPath(); ctx.ellipse(px+17*s, headY-3.5*s, 13*s, 3.5*s, 0, 0, Math.PI*2); ctx.fill();
+  const hatG = ctx.createLinearGradient(px+10*s, 0, px+24*s, 0);
+  hatG.addColorStop(0, '#2a1e14'); hatG.addColorStop(0.5, '#4a3a28'); hatG.addColorStop(1, '#2a1e14');
   ctx.fillStyle = hatG;
-  roundRect(ctx, px+10*s, py+0.5*s+walk*0.2, 14*s, 5.5*s, 2*s);
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.fillRect(px+12*s, py+1*s+walk*0.2, 10*s, 1.5*s);
+  roundRect(ctx, px+10*s, headY-9*s, 14*s, 6*s, 2*s);
+  // hat band
+  ctx.fillStyle = '#c45a3a';
+  ctx.fillRect(px+11*s, headY-5*s, 12*s, 1.8*s);
 
-  // face details
-  if(S.dir==='down'){
+  // face
+  if(S.dir === 'down'){
     ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.arc(px+14*s, py+8.5*s+walk*0.2, 1.3*s, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px+20*s, py+8.5*s+walk*0.2, 1.3*s, 0, Math.PI*2); ctx.fill();
-    // eye shine
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath(); ctx.arc(px+14.4*s, py+8.2*s+walk*0.2, 0.5*s, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px+20.4*s, py+8.2*s+walk*0.2, 0.5*s, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#c09080';
-    ctx.beginPath(); ctx.ellipse(px+17*s, py+11*s+walk*0.2, 1.6*s, 1.1*s, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+14*s, headY-0.5*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+20*s, headY-0.5*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(px+14.4*s, headY-0.8*s, 0.5*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+20.4*s, headY-0.8*s, 0.5*s, 0, Math.PI*2); ctx.fill();
+    // smile
+    ctx.strokeStyle = '#b08070';
+    ctx.lineWidth = 1*s;
+    ctx.beginPath(); ctx.arc(px+17*s, headY+2*s, 2.5*s, 0.1, Math.PI-0.1); ctx.stroke();
+    // short beard (ChatGPT surveyor style)
+    ctx.fillStyle = '#5a4030';
+    ctx.beginPath(); ctx.ellipse(px+17*s, headY+4.5*s, 4*s, 2.5*s, 0, 0, Math.PI); ctx.fill();
   } else if(S.dir === 'left'){
     ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.arc(px+13*s, py+8.5*s+walk*0.2, 1.3*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+13*s, headY-0.5*s, 1.4*s, 0, Math.PI*2); ctx.fill();
   } else if(S.dir === 'right'){
     ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.arc(px+21*s, py+8.5*s+walk*0.2, 1.3*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+21*s, headY-0.5*s, 1.4*s, 0, Math.PI*2); ctx.fill();
   }
 
+  // hammer with gleam
   if(S.hasHammer){
-    ctx.fillStyle = S.hasReinforce ? '#e8d8a0' : '#d8d8e8';
-    if(S.dir === 'right'){
-      roundRect(ctx, px+25*s, py+15*s, 15*s, 3.5*s, 1.5*s);
-      ctx.fillStyle = '#5a3a18';
+    ctx.fillStyle = S.hasReinforce ? '#f0e0a0' : '#e0e0f0';
+    if(S.dir==='right'){
+      roundRect(ctx, px+25*s, py+15*s, 16*s, 3.5*s, 1.5*s);
+      ctx.fillStyle = '#6a4020';
       roundRect(ctx, px+23*s, py+13*s, 5*s, 8*s, 1.5*s);
-    } else if(S.dir === 'left'){
-      roundRect(ctx, px-6*s, py+15*s, 15*s, 3.5*s, 1.5*s);
-      ctx.fillStyle = '#5a3a18';
+    } else if(S.dir==='left'){
+      roundRect(ctx, px-7*s, py+15*s, 16*s, 3.5*s, 1.5*s);
+      ctx.fillStyle = '#6a4020';
       roundRect(ctx, px+7*s, py+13*s, 5*s, 8*s, 1.5*s);
     } else {
-      roundRect(ctx, px+15*s, py+3*s, 3.5*s, 13*s, 1.5*s);
-      ctx.fillStyle = '#5a3a18';
-      roundRect(ctx, px+12*s, py+2*s, 10*s, 5*s, 1.5*s);
+      roundRect(ctx, px+15*s, py+2*s, 3.5*s, 14*s, 1.5*s);
+      ctx.fillStyle = '#6a4020';
+      roundRect(ctx, px+11*s, py+1*s, 11*s, 5*s, 1.5*s);
     }
   }
 
-  if(S.blocking){
-    ctx.fillStyle = 'rgba(100,200,255,0.35)';
-    ctx.beginPath(); ctx.arc(px+16*s, py+20*s, 14*s, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#a0d8ff'; ctx.lineWidth = 2*s;
-    ctx.beginPath(); ctx.arc(px+16*s, py+20*s, 15*s, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath(); ctx.arc(px+16*s, py+16*s, 3*s, 0, Math.PI*2); ctx.fill();
-  }
   if(S.atk > 0 && S.hasHammer){
-    ctx.strokeStyle = `rgba(230,210,170,${S.atk*2.2})`;
-    ctx.lineWidth = 2.5*s;
+    ctx.strokeStyle = `rgba(255,230,180,${S.atk*2.5})`;
+    ctx.lineWidth = 3*s;
     ctx.lineCap = 'round';
     ctx.beginPath();
     let ax=px+17*s, ay=py+17*s, a0=0, a1=Math.PI;
-    if(S.dir==='right'){ a0=-0.9; a1=0.9; ax+=14*s; }
-    else if(S.dir==='left'){ a0=Math.PI-0.9; a1=Math.PI+0.9; ax-=14*s; }
-    else if(S.dir==='up'){ a0=Math.PI+0.4; a1=-0.4; ay-=10*s; }
-    else { a0=0.4; a1=Math.PI-0.4; ay+=12*s; }
-    ctx.arc(ax, ay, 16*s, a0, a1);
+    if(S.dir==='right'){ a0=-1; a1=1; ax+=14*s; }
+    else if(S.dir==='left'){ a0=Math.PI-1; a1=Math.PI+1; ax-=14*s; }
+    else if(S.dir==='up'){ a0=Math.PI+0.5; a1=-0.5; ay-=10*s; }
+    else { a0=0.5; a1=Math.PI-0.5; ay+=12*s; }
+    ctx.arc(ax, ay, 17*s, a0, a1);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
