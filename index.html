@@ -106,7 +106,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v10.3 — cutscene portraits · sprite sheet terrain · shaped geography</footer>
+<footer>Star-Well Survey · v11 — ChatGPT character sheet · sprite-based characters · cinematic intro</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -257,6 +257,26 @@ const mapSheet = new Image();
 mapSheet.src = 'sprites-map.png';
 let mapSheetReady = false;
 mapSheet.onload = ()=>{ mapSheetReady = true; };
+
+// Individual character/object sprite sheets (v11 graphics)
+const charSheet = new Image();
+charSheet.src = 'sprites-characters.png';
+let charSheetReady = false;
+charSheet.onload = ()=>{ charSheetReady = true; };
+
+const sprSurveyor = new Image(); sprSurveyor.src = 'spr-surveyor.png';
+const sprWell = new Image(); sprWell.src = 'spr-well.png';
+const sprGhost = new Image(); sprGhost.src = 'spr-ghost.png';
+const sprMineC = new Image(); sprMineC.src = 'spr-mine-creature.png';
+const sprMineB = new Image(); sprMineB.src = 'spr-mine-boss.png';
+const sprPortrait = new Image(); sprPortrait.src = 'spr-surveyor-portrait.png';
+const sprLady = new Image(); sprLady.src = 'spr-lady.png';
+const sprTownMan = new Image(); sprTownMan.src = 'spr-townman.png';
+const sprSheriff = new Image(); sprSheriff.src = 'spr-sheriff.png';
+let sprReady = {};
+[sprSurveyor,sprWell,sprGhost,sprMineC,sprMineB,sprPortrait,sprLady,sprTownMan,sprSheriff].forEach(im=>{
+  im.onload = ()=>{ sprReady[im.src] = true; };
+});
 // Tile atlas index: [sheetCol, sheetRow] by char
 const TILE_ATLAS = {
   'g': [0,0], 'd': [2,1], 'p': [4,1], 'w': [2,2], 'b': [1,7],
@@ -1881,6 +1901,13 @@ function drawObj(o,t){
       break;
     }
     case 'well': {
+      if(sprWell.complete && sprWell.naturalWidth>0){
+        const cols=4, rows=2;
+        const fw=Math.floor(sprWell.naturalWidth/cols), fh=Math.floor(sprWell.naturalHeight/rows);
+        const frame = (S.stakeA&&S.stakeB) ? 3 : Math.floor(t*2)%3;
+        ctx.drawImage(sprWell, (frame%cols)*fw, 0, fw, fh, px, py, 40*s, 40*s);
+        break;
+      }
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(px+20*s, py+32*s, 18*s, 5*s, 0, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#3a3a48';
@@ -1903,6 +1930,29 @@ function drawObj(o,t){
       break;
     }
     case 'npc': {
+      let npcImg = null;
+      if(o.id==='deputy'||o.id==='sheriff') npcImg = sprSheriff;
+      else if(o.id==='louisa'||o.id==='mara') npcImg = sprLady;
+      else if(o.id==='ghost') npcImg = sprGhost;
+      else if(o.id==='merchant'||o.id==='crowe') npcImg = sprTownMan;
+      if(npcImg && npcImg.complete && npcImg.naturalWidth>0){
+        const fw=Math.floor(npcImg.naturalWidth/6), fh=Math.floor(npcImg.naturalHeight/2);
+        const fr=Math.floor(t*3)%6;
+        if(o.id==='ghost') ctx.globalAlpha=0.7;
+        ctx.drawImage(npcImg, fr*fw, 0, fw, fh, px, py, 36*s, 40*s);
+        ctx.globalAlpha=1;
+        if(near(o, 2.2)){
+          ctx.fillStyle='rgba(8,12,18,0.75)';
+          const label=o.name||'Someone';
+          ctx.font=`${Math.max(10,11*s)}px system-ui`;
+          ctx.textAlign='center';
+          const tw=ctx.measureText(label).width;
+          ctx.fillRect(px+18*s-tw/2-4, py-8*s, tw+8, 14);
+          ctx.fillStyle='#e0b45c';
+          ctx.fillText(label, px+18*s, py+2*s);
+        }
+        break;
+      }
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(px+18*s, py+34*s, 10*s, 3*s, 0, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#1e2a38';
@@ -1995,6 +2045,29 @@ function drawObj(o,t){
       break;
     }
     case 'enemy': {
+      // Sheet-based enemies when available
+      if(o.boss && o.id==='caveboss' && sprMineB.complete && sprMineB.naturalWidth>0){
+        const fw=Math.floor(sprMineB.naturalWidth/4), fh=Math.floor(sprMineB.naturalHeight/2);
+        const fr=Math.floor(t*6)%4;
+        ctx.drawImage(sprMineB, fr*fw, 0, fw, fh, px, py-10*s, 48*s, 48*s);
+        ctx.fillStyle='#e07060';
+        for(let i=0;i<(o.hp||0);i++) ctx.fillRect(px+4*s+i*6*s, py-14*s, 5*s, 3*s);
+        break;
+      }
+      if(o.type==='cave' && sprMineC.complete && sprMineC.naturalWidth>0){
+        const fw=Math.floor(sprMineC.naturalWidth/4), fh=Math.floor(sprMineC.naturalHeight/3);
+        const fr=Math.floor(t*8)%4;
+        ctx.drawImage(sprMineC, fr*fw, 0, fw, fh, px+2*s, py+4*s, 36*s, 36*s);
+        break;
+      }
+      if(o.type==='wraith' && sprGhost.complete && sprGhost.naturalWidth>0){
+        const fw=Math.floor(sprGhost.naturalWidth/6), fh=Math.floor(sprGhost.naturalHeight/2);
+        const fr=Math.floor(t*6)%6;
+        ctx.globalAlpha=0.75;
+        ctx.drawImage(sprGhost, fr*fw, 0, fw, fh, px, py, 40*s, 40*s);
+        ctx.globalAlpha=1;
+        break;
+      }
       const fl = Math.floor(t*8)%2 ? 1 : 0.9;
       ctx.globalAlpha = fl;
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -2288,6 +2361,38 @@ function drawPlayer(t){
   const px = S.x*T - camX;
   const py = S.y*T - camY;
   const s = SPR;
+
+  // Try ChatGPT surveyor sprite frames (6x2 grid in spr-surveyor.png)
+  if(sprSurveyor.complete && sprSurveyor.naturalWidth > 0){
+    const fw = Math.floor(sprSurveyor.naturalWidth / 6);
+    const fh = Math.floor(sprSurveyor.naturalHeight / 2);
+    let row = 0, col = 0;
+    // map dir + walk to frames
+    const moving = Math.hypot(S.vx||0, S.vy||0) > 0.05 || S.anim > 0;
+    const frame = moving ? (Math.floor(S.anim) % 6) : 0;
+    if(S.dir==='down'){ row=0; col=frame; }
+    else if(S.dir==='right'){ row=0; col=Math.min(5, frame); }
+    else if(S.dir==='left'){ row=1; col=Math.min(5, frame); }
+    else { row=1; col=frame; } // up
+    if(S.atk>0) col = 5; // last frame as attack-ish
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(px+16*s, py+36*s, 12*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
+    if(S.invuln>0 && Math.floor(t*12)%2===0) ctx.globalAlpha=0.4;
+    if(S.dodgeT>0) ctx.globalAlpha=0.55;
+    const dw = 36*s, dh = 40*s;
+    ctx.drawImage(sprSurveyor, col*fw, row*fh, fw, fh, px+16*s-dw/2, py+36*s-dh, dw, dh);
+    ctx.globalAlpha=1;
+    if(S.atk>0 && S.hasHammer){
+      ctx.strokeStyle=`rgba(255,230,180,${S.atk*2})`;
+      ctx.lineWidth=2.5*s;
+      ctx.beginPath();
+      ctx.arc(px+16*s, py+18*s, 18*s, 0, Math.PI*1.2);
+      ctx.stroke();
+    }
+    return;
+  }
+
   const walk = Math.sin(S.anim * 1.15) * 2 * s;
   const stride = Math.sin(S.anim * 1.15);
   const dodging = S.dodgeT > 0;
