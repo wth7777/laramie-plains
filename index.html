@@ -8,6 +8,7 @@
 <style>
 :root{--bg:#080e16;--panel:#101820;--gold:#e0b45c;--gold2:#c4923a;--ink:#e8e2d4;--muted:#8a9a9a;--heart:#e07060;--accent:#3d8a7a}
 *{box-sizing:border-box;margin:0;padding:0}
+button{-webkit-user-select:none;user-select:none;}
 html,body{height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
 body{display:flex;flex-direction:column;align-items:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 header{width:min(100%,900px);padding:8px 12px 4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -16,8 +17,8 @@ header{width:min(100%,900px);padding:8px 12px 4px;display:flex;justify-content:s
 .top-actions{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--gold)}
 .btn{background:transparent;border:1px solid var(--gold2);color:var(--gold);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer}
 .btn:active,.btn.on{background:rgba(224,180,92,.18);border-color:var(--gold)}
-.game-wrap{position:relative;width:min(100vw - 8px, 860px);aspect-ratio:16/10;max-height:min(68vh, 520px);border:2px solid #243040;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px #1a2430,0 12px 36px rgba(0,0,0,.55);background:#1a2a1c}
-#game{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.game-wrap{position:relative;touch-action:none;overscroll-behavior:contain;width:min(100vw - 8px, 860px);aspect-ratio:16/10;max-height:min(68vh, 520px);border:2px solid #243040;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px #1a2430,0 12px 36px rgba(0,0,0,.55);background:#1a2a1c}
+#game{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;user-select:none;-webkit-user-select:none}
 .toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(8,14,22,.94);border:1px solid var(--gold2);color:var(--ink);padding:7px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .22s;pointer-events:none;max-width:92%;text-align:center;z-index:6}
 .toast.show{opacity:1}
 .hud{width:min(100vw - 8px,860px);display:flex;justify-content:space-between;align-items:center;padding:6px 4px 2px;font-size:12px;gap:8px}
@@ -52,6 +53,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
 #title .start{background:linear-gradient(180deg,#e0b45c,#c4923a);color:#1a1208;border:none;padding:11px 26px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.05em;cursor:pointer;box-shadow:0 4px 18px rgba(224,180,92,.35)}
 @media(min-width:820px){.controls{display:none}.game-wrap{max-height:min(72vh,560px)}}
 @media(max-height:700px){.brand strong{font-size:1rem}.game-wrap{max-height:58vh}}
+@media (orientation:landscape) and (max-height:520px){header{padding:3px 8px 2px}.brand small{font-size:8px}.brand strong{font-size:.9rem}.game-wrap{width:min(68vw,860px);max-height:66vh}.hud{width:min(68vw,860px);padding:2px 4px}.controls{width:min(68vw,860px);padding:2px}.dpad{grid-template-columns:38px 38px 38px;grid-template-rows:38px 38px 38px}.dpad button{width:38px;height:38px}.abtn{flex-direction:row;flex-wrap:wrap;justify-content:flex-end}.abtn button{min-width:82px;padding:8px}.menus{padding:0 0 2px}footer{display:none}}
 </style>
 </head>
 <body>
@@ -70,7 +72,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <div id="title">
     <canvas id="intro" width="800" height="500" style="position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated"></canvas>
     <div id="titleContent" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center;background:linear-gradient(180deg,rgba(8,14,22,.55) 0%,rgba(10,18,24,.75) 100%)">
-      <div class="sub">Star-Well Survey · v6</div>
+      <div class="sub">Star-Well Survey · Frontier Adventure</div>
       <h1>LARAMIE<br>PLAINS</h1>
       <p>The Union Pacific has not yet reached these high plains. You arrive with a survey chain and a blank field book. Something under the old well is answering the measurements — and the storm is coming.</p>
       <button class="start" id="startBtn">BEGIN THE JOURNEY</button>
@@ -106,7 +108,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v11.2 — no black borders · procedural characters · clean tiles</footer>
+<footer>Star-Well Survey · v13 pixel-art graphics pass · reliable controls</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -292,6 +294,26 @@ function tileVar(tx,ty,baseCol,row){
 // Sprite helpers
 function spr(sx, sy, dx, dy, dw=32, dh=32){
   ctx.drawImage(atlasCanvas, sx, sy, 32, 32, Math.round(dx), Math.round(dy), dw, dh);
+}
+
+// ---------- 16-bit presentation pass ----------
+// Render the scene at a deliberately compact internal resolution, then scale it
+// with nearest-neighbour sampling. This gives procedural characters and terrain
+// a consistent pixel-art treatment without relying on the problem sprite sheets.
+const pixelBuffer = document.createElement('canvas');
+pixelBuffer.width = 400;
+pixelBuffer.height = 250;
+const pixelCtx = pixelBuffer.getContext('2d', { alpha: false });
+pixelCtx.imageSmoothingEnabled = true;
+function presentPixelArt(){
+  pixelCtx.clearRect(0, 0, pixelBuffer.width, pixelBuffer.height);
+  pixelCtx.drawImage(canvas, 0, 0, pixelBuffer.width, pixelBuffer.height);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(pixelBuffer, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
 }
 
 
@@ -903,9 +925,13 @@ function move(dt){
     let ddx=0,ddy=0;
     if(S.dir==='up') ddy=-1; else if(S.dir==='down') ddy=1;
     else if(S.dir==='left') ddx=-1; else ddx=1;
-    S.x += ddx * 1.4; S.y += ddy * 1.4;
-    S.x = Math.max(0.55, Math.min(COLS-1.05, S.x));
-    S.y = Math.max(0.55, Math.min(ROWS-1.05, S.y));
+    const dodgeX = Math.max(0.55, Math.min(COLS-1.05, S.x + ddx * 1.4));
+    const dodgeY = Math.max(0.55, Math.min(ROWS-1.05, S.y + ddy * 1.4));
+    // Dodge respects solid tiles; resolve axes independently so a wall cannot be crossed.
+    if(!solid(Math.floor(dodgeX),Math.floor(S.y)) && !solid(Math.floor(dodgeX+0.3),Math.floor(S.y)) &&
+       !solid(Math.floor(dodgeX),Math.floor(S.y+0.3)) && !solid(Math.floor(dodgeX+0.3),Math.floor(S.y+0.3))) S.x=dodgeX;
+    if(!solid(Math.floor(S.x),Math.floor(dodgeY)) && !solid(Math.floor(S.x+0.3),Math.floor(dodgeY)) &&
+       !solid(Math.floor(S.x),Math.floor(dodgeY+0.3)) && !solid(Math.floor(S.x+0.3),Math.floor(dodgeY+0.3))) S.y=dodgeY;
     burst(S.x*T, S.y*T, 6, '#c0d0e0');
   }
   if(dx||dy){
@@ -943,7 +969,10 @@ function move(dt){
         o.y = S.y + (Math.random()-0.5)*3;
         burst(o.x*T, o.y*T, 8, '#a0a0ff');
       } else {
-        o.x+=Math.cos(a)*spd*dt; o.y+=Math.sin(a)*spd*dt;
+        const ex=o.x+Math.cos(a)*spd*dt, ey=o.y+Math.sin(a)*spd*dt;
+        // Enemies should chase around solid map tiles instead of walking through walls.
+        if(!solid(Math.floor(ex),Math.floor(o.y)) && !solid(Math.floor(ex+0.35),Math.floor(o.y+0.35))) o.x=ex;
+        if(!solid(Math.floor(o.x),Math.floor(ey)) && !solid(Math.floor(o.x+0.35),Math.floor(ey+0.35))) o.y=ey;
       }
     }
     if(dist<0.65&&S.invuln<=0){
@@ -2768,9 +2797,8 @@ $('interactBtn').onclick=()=>{ resume(); interact(); };
 $('toolBtn').onclick=()=>{ resume(); useTool(); };
 const dodgeBtn = $('dodgeBtn');
 if(dodgeBtn){
-  dodgeBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); touch.dodge=true; resume(); });
-  dodgeBtn.addEventListener('pointerup',()=>touch.dodge=false);
-  dodgeBtn.addEventListener('pointercancel',()=>touch.dodge=false);
+  dodgeBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); touch.dodge=true; dodgeBtn.setPointerCapture?.(e.pointerId); resume(); });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>dodgeBtn.addEventListener(ev,()=>touch.dodge=false));
 }
 const blockBtn = $('blockBtn');
 if(blockBtn){
@@ -2840,6 +2868,8 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{ keys[e.key]=false; keys[e.key.toLowerCase()]=false; });
 window.addEventListener('pointerdown',()=>{ resume(); if(S.started){ startAmbient(); startMusic(); } },{once:true});
+window.addEventListener('blur',()=>{ keys={}; touch={}; document.querySelectorAll('.dpad button').forEach(b=>b.classList.remove('p')); });
+document.addEventListener('contextmenu',e=>{ if(e.target.closest('.game-wrap,.controls')) e.preventDefault(); });
 
 
 // ---------- Cinematic intro (runs on title screen) ----------
@@ -2924,6 +2954,7 @@ function frame(t){
     particles=particles.filter(p=>p.life>0);
     particles.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; p.vy+=50*dt; });
     draw();
+    presentPixelArt();
   } else {
     drawIntro(t/1000);
   }
