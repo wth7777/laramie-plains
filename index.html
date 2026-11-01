@@ -106,7 +106,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v11.1 — fixed sprite borders · clean frames · surveyor style</footer>
+<footer>Star-Well Survey · v11.2 — no black borders · procedural characters · clean tiles</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -1682,7 +1682,7 @@ function drawTile(tx,ty,ch,biome){
     else if(key==='m'){ sc=4+Math.abs(tx+ty)%4; sr=7; }
     else if(key==='s'){ sc=Math.abs(tx+ty)%8; sr=8; }
     else if(key==='h'){ sc=Math.abs(tx*2+ty)%8; sr=9; }
-    ctx.drawImage(mapSheet, sc*32, sr*32, 32, 32, Math.floor(px), Math.floor(py), T+1, T+1);
+    ctx.drawImage(mapSheet, sc*32+1, sr*32+1, 30, 30, Math.floor(px), Math.floor(py), T+1, T+1);
     // light grass sway overlay only for grass
     if(key==='g' && (biome==='prairie'||biome==='town')){
       const sway = Math.sin(time*2+tx*0.7+ty)*1.5;
@@ -1901,14 +1901,6 @@ function drawObj(o,t){
       break;
     }
     case 'well': {
-      if(sprWell.complete && sprWell.naturalWidth>0){
-        // Center crop — one clean well, no border scroll
-        const sw=Math.min(120, Math.floor(sprWell.naturalWidth/2));
-        const sh=Math.min(140, sprWell.naturalHeight-10);
-        const sx=Math.floor(sprWell.naturalWidth/2-sw/2);
-        ctx.drawImage(sprWell, sx, 5, sw, sh, px-2*s, py-4*s, 42*s, 42*s);
-        break;
-      }
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(px+20*s, py+32*s, 18*s, 5*s, 0, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#3a3a48';
@@ -1931,49 +1923,48 @@ function drawObj(o,t){
       break;
     }
     case 'npc': {
-      let npcImg = null;
-      if(o.id==='deputy'||o.id==='sheriff') npcImg = sprSheriff;
-      else if(o.id==='louisa'||o.id==='mara') npcImg = sprLady;
-      else if(o.id==='ghost') npcImg = sprGhost;
-      else if(o.id==='merchant'||o.id==='crowe') npcImg = sprTownMan;
-      if(npcImg && npcImg.complete && npcImg.naturalWidth>0){
-        // Use one clean center region — avoid scrolling through panel chrome
-        const sw = Math.min(64, Math.floor(npcImg.naturalWidth/4));
-        const sh = Math.min(80, Math.floor(npcImg.naturalHeight/2));
-        const sx = Math.floor(npcImg.naturalWidth/2 - sw/2);
-        const sy = Math.floor(npcImg.naturalHeight/2 - sh/2);
-        if(o.id==='ghost') ctx.globalAlpha=0.7;
-        ctx.drawImage(npcImg, sx, sy, sw, sh, px, py, 34*s, 38*s);
-        ctx.globalAlpha=1;
-        if(near(o, 2.2)){
-          ctx.fillStyle='rgba(8,12,18,0.75)';
-          const label=o.name||'Someone';
-          ctx.font=`${Math.max(10,11*s)}px system-ui`;
-          ctx.textAlign='center';
-          const tw=ctx.measureText(label).width;
-          ctx.fillRect(px+18*s-tw/2-4, py-8*s, tw+8, 14);
-          ctx.fillStyle='#e0b45c';
-          ctx.fillText(label, px+18*s, py+2*s);
-        }
-        break;
-      }
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.beginPath(); ctx.ellipse(px+18*s, py+34*s, 10*s, 3*s, 0, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#1e2a38';
-      ctx.fillRect(px+11*s, py+24*s, 5*s, 9*s);
-      ctx.fillRect(px+20*s, py+24*s, 5*s, 9*s);
-      ctx.fillStyle = '#3d6a5a';
-      ctx.fillRect(px+10*s, py+13*s, 16*s, 13*s);
-      ctx.fillStyle = '#2d5a4a';
-      ctx.fillRect(px+10*s, py+13*s, 16*s, 3*s);
-      ctx.fillStyle = '#e8d0b0';
+      // procedural NPCs only (no sheet borders)
+
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath(); ctx.ellipse(px+18*s, py+35*s, 11*s, 3.5*s, 0, 0, Math.PI*2); ctx.fill();
+      // distinct colors by id
+      let coat = '#3d6a5a', accent = '#2d5a4a', hat = '#3a2a1a';
+      if(o.id==='mara'){ coat='#4a7a6a'; accent='#c45a3a'; hat='#2a4a3a'; }
+      else if(o.id==='merchant'){ coat='#6a5a3a'; accent='#e0b45c'; hat='#4a3a2a'; }
+      else if(o.id==='deputy'){ coat='#3a4a6a'; accent='#c0c0d0'; hat='#2a2a3a'; }
+      else if(o.id==='crowe'){ coat='#5a4a3a'; accent='#8a6a40'; hat='#3a2a1a'; }
+      else if(o.id==='ghost'){ coat='#4a5a6a'; accent='#80a0c0'; hat='#3a4a5a'; ctx.globalAlpha=0.7; }
+      else if(o.id==='louisa'){ coat='#6a4a5a'; accent='#d080a0'; hat='#4a3a3a'; }
+      ctx.fillStyle = '#1e2430';
+      roundRect(ctx, px+11*s, py+25*s, 5*s, 9*s, 1.5*s);
+      roundRect(ctx, px+20*s, py+25*s, 5*s, 9*s, 1.5*s);
+      ctx.fillStyle = coat;
+      roundRect(ctx, px+9*s, py+13*s, 18*s, 13*s, 4*s);
+      ctx.fillStyle = accent;
+      roundRect(ctx, px+10*s, py+13*s, 16*s, 3*s, 1.5*s);
+      ctx.fillStyle = '#f0d8b0';
       ctx.beginPath(); ctx.arc(px+18*s, py+9*s, 7.5*s, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#3a2a1a';
-      ctx.fillRect(px+9*s, py+3*s, 18*s, 5*s);
-      ctx.fillRect(px+12*s, py+1*s, 12*s, 3*s);
-      ctx.fillStyle = '#2a2a2a';
-      ctx.fillRect(px+14*s, py+8*s, 2.5*s, 2.5*s);
-      ctx.fillRect(px+20*s, py+8*s, 2.5*s, 2.5*s);
+      ctx.fillStyle = hat;
+      ctx.beginPath(); ctx.ellipse(px+18*s, py+5*s, 11*s, 3*s, 0, 0, Math.PI*2); ctx.fill();
+      roundRect(ctx, px+11*s, py+1*s, 14*s, 5*s, 2*s);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(px+15*s, py+8.5*s, 1.3*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px+21*s, py+8.5*s, 1.3*s, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath(); ctx.arc(px+15.3*s, py+8.2*s, 0.4*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px+21.3*s, py+8.2*s, 0.4*s, 0, Math.PI*2); ctx.fill();
+      // name plate when near
+      if(near(o, 2.2)){
+        ctx.fillStyle = 'rgba(8,12,18,0.75)';
+        const label = o.name || 'Someone';
+        ctx.font = `${Math.max(10, 11*s)}px system-ui`;
+        ctx.textAlign = 'center';
+        const tw = ctx.measureText(label).width;
+        ctx.fillRect(px+18*s - tw/2 - 4, py-6*s, tw+8, 14);
+        ctx.fillStyle = '#e0b45c';
+        ctx.fillText(label, px+18*s, py+4*s);
+      }
+      ctx.globalAlpha = 1;
       break;
     }
     case 'chest': {
@@ -2049,33 +2040,7 @@ function drawObj(o,t){
       break;
     }
     case 'enemy': {
-      // Sheet-based enemies when available — center crop, no border scroll
-      if(o.boss && o.id==='caveboss' && sprMineB.complete && sprMineB.naturalWidth>0){
-        const sw=Math.min(100, Math.floor(sprMineB.naturalWidth/2));
-        const sh=Math.min(100, Math.floor(sprMineB.naturalHeight/2));
-        const sx=Math.floor(sprMineB.naturalWidth/2-sw/2);
-        ctx.drawImage(sprMineB, sx, 5, sw, sh, px-4*s, py-8*s, 44*s, 44*s);
-        ctx.fillStyle='#e07060';
-        for(let i=0;i<(o.hp||0);i++) ctx.fillRect(px+4*s+i*6*s, py-14*s, 5*s, 3*s);
-        break;
-      }
-      if(o.type==='cave' && sprMineC.complete && sprMineC.naturalWidth>0){
-        const sw=Math.min(80, Math.floor(sprMineC.naturalWidth/3));
-        const sh=Math.min(80, Math.floor(sprMineC.naturalHeight/2));
-        const sx=Math.floor(sprMineC.naturalWidth/2-sw/2);
-        const sy=10;
-        ctx.drawImage(sprMineC, sx, sy, sw, sh, px, py, 36*s, 36*s);
-        break;
-      }
-      if(o.type==='wraith' && sprGhost.complete && sprGhost.naturalWidth>0){
-        const sw=Math.min(70, Math.floor(sprGhost.naturalWidth/3));
-        const sh=Math.min(90, Math.floor(sprGhost.naturalHeight/2));
-        const sx=Math.floor(sprGhost.naturalWidth/2-sw/2);
-        ctx.globalAlpha=0.75;
-        ctx.drawImage(sprGhost, sx, 5, sw, sh, px, py, 36*s, 40*s);
-        ctx.globalAlpha=1;
-        break;
-      }
+      // procedural enemies only (no sheet borders)
       const fl = Math.floor(t*8)%2 ? 1 : 0.9;
       ctx.globalAlpha = fl;
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
