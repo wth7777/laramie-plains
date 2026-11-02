@@ -18,7 +18,7 @@ header{width:min(100%,900px);padding:8px 12px 4px;display:flex;justify-content:s
 .btn{background:transparent;border:1px solid var(--gold2);color:var(--gold);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer}
 .btn:active,.btn.on{background:rgba(224,180,92,.18);border-color:var(--gold)}
 .game-wrap{position:relative;touch-action:none;overscroll-behavior:contain;width:min(100vw - 8px, 860px);aspect-ratio:16/10;max-height:min(68vh, 520px);border:2px solid #243040;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px #1a2430,0 12px 36px rgba(0,0,0,.55);background:#1a2a1c}
-#game{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;user-select:none;-webkit-user-select:none}
+#game{display:block;width:100%;height:100%;image-rendering:auto;touch-action:none;user-select:none;-webkit-user-select:none}
 .toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(8,14,22,.94);border:1px solid var(--gold2);color:var(--ink);padding:7px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .22s;pointer-events:none;max-width:92%;text-align:center;z-index:6}
 .toast.show{opacity:1}
 .hud{width:min(100vw - 8px,860px);display:flex;justify-content:space-between;align-items:center;padding:6px 4px 2px;font-size:12px;gap:8px}
@@ -70,7 +70,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <canvas id="game" width="800" height="500"></canvas>
   <div id="toast" class="toast"></div>
   <div id="title">
-    <canvas id="intro" width="800" height="500" style="position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated"></canvas>
+    <canvas id="intro" width="800" height="500" style="position:absolute;inset:0;width:100%;height:100%;image-rendering:auto"></canvas>
     <div id="titleContent" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center;background:linear-gradient(180deg,rgba(8,14,22,.55) 0%,rgba(10,18,24,.75) 100%)">
       <div class="sub">Star-Well Survey · Frontier Adventure</div>
       <h1>LARAMIE<br>PLAINS</h1>
@@ -108,7 +108,7 @@ footer{font-size:10px;color:var(--muted);padding-bottom:4px;text-align:center}
   <button id="helpBtn">Help</button>
   <button id="resetBtn">New Game</button>
 </section>
-<footer>Star-Well Survey · v13 pixel-art graphics pass · reliable controls</footer>
+<footer>Star-Well Survey · v13.2 — copper key under the well · black border fix</footer>
 
 <div id="modal" class="modal"><div class="panel"><button class="close" id="closeModal">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -297,24 +297,7 @@ function spr(sx, sy, dx, dy, dw=32, dh=32){
 }
 
 // ---------- 16-bit presentation pass ----------
-// Render the scene at a deliberately compact internal resolution, then scale it
-// with nearest-neighbour sampling. This gives procedural characters and terrain
-// a consistent pixel-art treatment without relying on the problem sprite sheets.
-const pixelBuffer = document.createElement('canvas');
-pixelBuffer.width = 400;
-pixelBuffer.height = 250;
-const pixelCtx = pixelBuffer.getContext('2d', { alpha: false });
-pixelCtx.imageSmoothingEnabled = true;
-function presentPixelArt(){
-  pixelCtx.clearRect(0, 0, pixelBuffer.width, pixelBuffer.height);
-  pixelCtx.drawImage(canvas, 0, 0, pixelBuffer.width, pixelBuffer.height);
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(pixelBuffer, 0, 0, canvas.width, canvas.height);
-  ctx.restore();
-}
+// presentPixelArt removed — was causing black borders (alpha:false downsample)
 
 
 // ---------- State ----------
@@ -704,6 +687,7 @@ const zones = {
       {x:14,y:7,k:'enemy',id:'wraith2',hp:3, type:'wraith'},
       {x:10,y:5,k:'shrine'},
       {x:16,y:3,k:'chest',id:'c9',item:'lantern'},
+      {x:13,y:9,k:'chest',id:'cCopper',item:'copperKey'},
       {x:3,y:9,k:'sign',label:'No trespass — 1866'},
       {x:8,y:2,k:'npc',id:'ghost',name:'Faded Surveyor'},
       {x:2,y:2,k:'tombstone',id:'grave1',label:'Restless Grave'},
@@ -1424,8 +1408,8 @@ function interact(){
     case'well':
       if(!(S.stakeA&&S.stakeB)) dialog('The Old Well','<p>The rim is etched with markings that look almost like star positions. Your chain trembles, but you need both brass stakes to fix its true location.</p>','well');
       else if(!S.wellRocksCleared) dialog('Sealed Well Chamber','<p>A stone door blocks the well entrance. Break it with your survey hammer.</p>');
-      else if(!S.hasCopperKey) dialog('The Sealed Chamber','<p>The stone door is broken, but the inner chamber is sealed by an ancient lock. It requires the Copper Key.</p>');
-      else if(!S.wellChamberUnlocked){ S.wellChamberUnlocked=true; SFX.well(); note('The Copper Key turns in the ancient lock. The chamber beneath the Star-Well opens.'); save(); setTimeout(()=>startCutscene('wellChamber'), 300); }
+      else if(!S.hasCopperKey) dialog('The Sealed Chamber','<p>The stone door is broken, but the inner chamber is sealed by an ancient copper lock.</p><p><b>You need the Copper Key.</b> Search the Haunted Plains — defeat the ghost surveyor who still walks there.</p>');
+      else if(!S.wellChamberUnlocked){ S.wellChamberUnlocked=true; SFX.well(); note('The Copper Key turns in the ancient lock. The chamber beneath the Star-Well opens. At last, the survey goes under.'); save(); setTimeout(()=>startCutscene('wellChamber'), 300); }
       else {
         SFX.portal();
         S.zone = 'underworld';
@@ -1561,6 +1545,7 @@ function openChest(o){
   else if(o.item==='reinforce'){ S.hasReinforce=true; S.dmg=2; msg+='a reinforced hammer head! Damage increased.'; note('Reinforced hammer fitted. Strikes land harder.'); }
   else if(o.item==='lantern'){ S.hasLantern=true; msg+='a star lantern. Hidden things may show.'; note('Star lantern recovered on the Haunted Plains.'); }
   else if(o.item==='compass'){ S.hasCompass=true; msg+='a surveyor\'s compass!'; note('Compass found in the mine depths.'); }
+  else if(o.item==='copperKey'){ S.hasCopperKey=true; msg+='the Copper Key!'; note('Copper Key found on the Haunted Plains. It opens the chamber under the Star-Well.'); }
   else { S.coins+=5; msg+='a few coins.'; }
   toast(msg); save();
 }
@@ -1585,10 +1570,15 @@ function useTool(){
             setTimeout(()=>startCutscene('ending'), 800);
           } else if(o.boss && o.id==='ghostBoss' && !S.hauntedBossDefeated){
             S.hauntedBossDefeated = true;
-            note('The ghost surveyor is laid to rest.');
+            note('The ghost surveyor is laid to rest. A copper key fell from the light.');
+            if(!S.hasCopperKey){
+              S.hasCopperKey = true;
+              toast('Copper Key obtained! Return to the well at camp.');
+            } else {
+              toast('The ghost boss fades.');
+            }
             save();
             SFX.success();
-            toast('The ghost boss fades. The copper key is revealed at the mysterious grave.');
           } else if(o.boss && o.id==='caveboss'){
             S.flags.mineBoss = true;
             S.mineBossDefeated = true;
@@ -2769,7 +2759,10 @@ function updateHud(){
   $('toolLabel').textContent=S.hasHammer?'Survey hammer':'Survey chain';
   let obj='Find the brass survey stakes near camp';
   if(S.stakeA&&S.stakeB&&!S.heardWell) obj='Investigate the old well — the storm is rising';
-  else if(S.heardWell&&!S.hasMap) obj='Seek the Wind Shrine on the ridge';
+  else if(S.heardWell && !S.wellRocksCleared) obj='Break the sealed well chamber with your hammer';
+  else if(S.wellRocksCleared && !S.hasCopperKey) obj='Find the Copper Key — Haunted Plains (defeat the ghost)';
+  else if(S.hasCopperKey && !S.wellChamberUnlocked) obj='Use the Copper Key on the well at camp';
+  else if(S.wellChamberUnlocked && !S.hasMap) obj='Seek the Wind Shrine on the ridge';
   else if(S.hasMap&&!S.hasKey) obj='Find the brass key';
   else if(S.hasKey&&!S.flags.door) obj='Open the Understar Door';
   else if(S.flags.door && !S.flags.ending) obj='Descend into the Understar Cavern — defeat the Echo';
@@ -2821,6 +2814,7 @@ $('bagBtn').onclick=()=>{
   h+=`<li>Coins: ${S.coins}</li><li>Health: ${S.hp}/${S.maxHp}</li>`;
   if(S.hasHammer) h+='<li>Survey hammer'+(S.hasReinforce?' (reinforced)':'')+'</li>';
   if(S.hasKey) h+='<li>Brass key</li>';
+  if(S.hasCopperKey) h+='<li>Copper Key — opens the chamber under the well</li>';
   if(S.hasMap) h+='<li>Old map</li>';
   if(S.hasCompass) h+='<li>Surveyor\'s compass</li>';
   if(S.hasLantern) h+='<li>Star lantern</li>';
@@ -2954,7 +2948,6 @@ function frame(t){
     particles=particles.filter(p=>p.life>0);
     particles.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; p.vy+=50*dt; });
     draw();
-    presentPixelArt();
   } else {
     drawIntro(t/1000);
   }
